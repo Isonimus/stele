@@ -19,10 +19,19 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
 - [deferred] Rule 9 (bare `ADR NNNN` prose references) ships as a warning, not an error —
   567 legacy references exist in boxel and some point at external context. Revisit
   promoting it to an error once the corpus is migrated and the true failure rate is
-  known (ADR-0003).
+  known (ADR-0003). Note rule 9 cannot distinguish a typo from a deliberate reference to
+  *another repo's* ADR — this repo's own ADRs trip it six times citing boxel and gamatar
+  ids. Promoting it to an error needs a way to mark cross-repo citations first.
 - [deferred] `slices/` directory and the ADR/slice split apply to **new** documents only.
   boxel's existing 130 keep `type:` in frontmatter instead — a physical split would
   rewrite 567 cross-references for no additional query power (ADR-0002).
+- [feature] Migrate boxel's `mob-egg-rule` and `block-detail-default` out of assistant
+  memory into its `CLAUDE.md` §5 invariants table, keeping the GLASS exception and its
+  reason. Lands with Phase 3 (ADR-0004).
+- [feature] Wire boxel's eleven unwired `scripts/*-verify.mjs` into `package.json` and run
+  their console-error half in CI. They currently run never (ADR-0004).
+- [feature] gamatar has no verification harness at all despite the same untestable-render
+  problem. Seed `scripts/` and a first verify script for the renderer (ADR-0004).
 - [audit] ~12 boxel ADRs are `type: batch` (several unrelated features in one document)
   and cannot map 1:1 to a work item. Decide whether batches should be retired as a
   practice going forward, or remain a legitimate document kind (ADR-0002).
