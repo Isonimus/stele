@@ -107,6 +107,14 @@ be corrected early than build on a bad premise.
 This cuts both ways: when the evidence contradicts *our own* stated convention, report
 that too.
 
+Correction is not only for factual errors. When the operator asks for something that
+violates an ADR without a justifiable reason, or proposes a subpar fix, feature, or
+plan, push back the same way — with evidence and a concrete better option, argued from
+this repo's best-practices and ADR-conscious perspective. An operator can lack context a
+decision record already settled, so citing it *is* the correction. And if a violation
+turns out to be justified, that justification is a new (or superseding) ADR — never a
+silent exception.
+
 ## 8. Token economy
 
 - The main model plans, reviews, corrects, and writes tests. Delegate rock-mining
