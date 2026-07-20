@@ -20,16 +20,17 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   silently if this repo moves: global conventions would vanish with no error, since a
   missing `~/.claude/CLAUDE.md` is a legal state. A `--check` mode that verifies the link
   resolves is the cheap guard (ADR-0003).
-- [feature] Rehome the general working practices still duplicated across
-  `~/.claude/projects/*/memory/` now that `global/CLAUDE.md` covers them — 12 trailer
-  memories across 8 projects, plus `feedback_coding_style`, `feedback_language`,
-  `delegation-and-compact-protocol`, `iker-operator-profile`. Read before deleting: some
-  mix a global rule with repo-specific content. **Delete outright**
-  `backlog-closure-convention` (the dual-write rule ADR-0001 obsoletes). **Keep**
-  `iker-git-identity` — operator-personal, correctly filed (ADR-0004).
-- [audit] Undecided: whether l33t-mmorpg's observability rule (every agent invocation and
-  slash command emits a notification line) is global or repo-local. Left out of
-  `global/CLAUDE.md` pending a call (ADR-0004).
+- [bug] **`templates/CLAUDE.md` is itself the dual-write ADR-0005 rejects.** Its §3, §6,
+  §7 and §8 restate the global quality bar, commit rules, operator-may-be-wrong clause and
+  token economy verbatim, so scaffolding from it copies general practice into every repo
+  with no sync path — the rejected alternative, executed by the tool meant to prevent it.
+  Strip those sections and replace them with a pointer to `~/.claude/CLAUDE.md`, leaving
+  only the repo-specific frame (taxonomy, enforcement, verification harness, invariants
+  table). l33t-mmorpg was scaffolded lean by hand instead of from the template (ADR-0005).
+- [feature] l33t-mmorpg is not method-migrated: no `adr/` tree, no `LEDGER.md` (it still
+  has `ISSUES.md`), no `scripts/`. Its new `CLAUDE.md` therefore omits the taxonomy,
+  enforcement and verification sections — stating rules about files that do not exist
+  would make the file false on arrival. Migrate the repo, then add them (ADR-0001).
 - [deferred] Rule 9 (bare `ADR NNNN` prose references) ships as a warning, not an error —
   567 legacy references exist in boxel and some point at external context. Revisit
   promoting it to an error once the corpus is migrated and the true failure rate is

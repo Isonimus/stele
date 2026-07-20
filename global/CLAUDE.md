@@ -86,6 +86,11 @@ measure it.
   (mechanical refactors, boilerplate, broad surveys) to cheaper subagents — **Haiku 4.5
   for mechanical work, Sonnet 5 for work needing judgement** — instructed to return
   minimal, structured output so the main context stays clean.
+- **Say what was delegated, to which agent and model, and why** — one line, before the
+  work starts. Delegation is otherwise invisible: a subagent's reasoning never reaches
+  this conversation, so an unannounced handoff means a result arrives with no way to
+  judge how much to trust it, and no chance to object that the task needed judgement
+  rather than a cheaper model.
 - When context is deep and the task is clearly switching, **say it's a good moment to
   `/compact`** — it gets forgotten, and it causes context rot.
 
