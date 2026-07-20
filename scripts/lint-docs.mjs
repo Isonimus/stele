@@ -25,15 +25,29 @@ const normId = (v) => String(v).trim().padStart(4, '0');
 
 const isId = (v) => /^\d{1,4}$/.test(String(v).trim());
 
-/** Parses a flat scalar: quoted string, inline list, or bare value. */
+/**
+ * Parses a flat scalar: quoted string, inline list, or bare value.
+ *
+ * A double-quoted value is decoded as a JSON string, because that is how the migrator
+ * emits free-text titles (`"Status effects: \"poison\"…"`). The two must share one
+ * escaping convention or a title with an inner quote round-trips wrong: migrated clean,
+ * misread at lint. Single-quoted values (ids) carry no escapes and only shed their quotes.
+ */
 function parseScalar(raw) {
   const v = raw.trim();
   if (v.startsWith('[') && v.endsWith(']')) {
     const inner = v.slice(1, -1).trim();
     if (!inner) return [];
-    return inner.split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, ''));
+    return inner.split(',').map((s) => parseScalar(s));
   }
-  return v.replace(/^['"]|['"]$/g, '');
+  if (v.startsWith('"') && v.endsWith('"')) {
+    try {
+      return JSON.parse(v);
+    } catch {
+      return v.slice(1, -1);
+    }
+  }
+  return v.replace(/^'|'$/g, '');
 }
 
 /**
@@ -76,7 +90,7 @@ export function parseFrontmatter(text) {
 
 // --- loading ----------------------------------------------------------------
 
-function loadDocs(root) {
+export function loadDocs(root) {
   const dirs = ['adr', 'slices'].map((d) => join(root, d)).filter(existsSync);
   const docs = [];
 
