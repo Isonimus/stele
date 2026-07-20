@@ -1,0 +1,16 @@
+{
+  "name": "claude-method",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A linted, installable ADR workflow for git projects using Claude as an assistant",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "lint": "node scripts/lint-docs.mjs .",
+    "scan": "node scripts/scan-legacy.mjs",
+    "migrate": "node scripts/migrate-adrs.mjs"
+  }
+}
