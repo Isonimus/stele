@@ -23,9 +23,14 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
 - [deferred] `slices/` directory and the ADR/slice split apply to **new** documents only.
   boxel's existing 130 keep `type:` in frontmatter instead — a physical split would
   rewrite 567 cross-references for no additional query power (ADR-0002).
+- [feature] **boxel has no `CLAUDE.md` at all** — a prerequisite for both memory-rehoming
+  items below, which say "into its `CLAUDE.md` §5" as though the file existed. Scaffold it
+  from `templates/CLAUDE.md` (which now carries the ADR-violation correction clause) before
+  rehoming anything (ADR-0004).
 - [feature] Migrate boxel's `mob-egg-rule` and `block-detail-default` out of assistant
   memory into its `CLAUDE.md` §5 invariants table, keeping the GLASS exception and its
-  reason. Lands with Phase 3 (ADR-0004).
+  reason. Was scoped to Phase 3, which shipped gamatar-only; blocked on the missing
+  `CLAUDE.md` above (ADR-0004).
 - [feature] Wire boxel's eleven unwired `scripts/*-verify.mjs` into `package.json` and run
   their console-error half in CI. They currently run never (ADR-0004).
 - [feature] gamatar has no verification harness at all despite the same untestable-render
