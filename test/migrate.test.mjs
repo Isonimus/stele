@@ -137,3 +137,13 @@ test('type is seeded from the survey, with batches detected by title', () => {
   assert.equal(p.get('0061').fields.type, 'batch'); // "Flora batch — …"
   assert.equal(p.get('0129').fields.type, 'slice');
 });
+
+test('the architectural set is per-repo, overridable from the default', () => {
+  // The default set is boxel's survey; any other corpus passes its own. gamatar's ADRs
+  // are all architecture, including 0129 — which would otherwise default to slice.
+  const p = byId(planMigration(corpus, { architecture: new Set(['0129']) }));
+  assert.equal(p.get('0129').fields.type, 'architecture');
+  assert.equal(p.get('0051').fields.type, 'slice'); // in boxel's default, not this set
+  // A title batch still wins even when the id is not in the set — batch is content-shaped.
+  assert.equal(p.get('0061').fields.type, 'batch');
+});

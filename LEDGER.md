@@ -56,9 +56,11 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   §5 invariants the ADR admits cannot be linted. Must be **warning-only on legacy** like
   rule 9 — boxel's ~104 existing slices predate the rule and would otherwise go red
   (ADR-0004).
-- [feature] `/init-method` needs a survey step. The architectural `type:` set is a hand-
-  seeded list of 22 ids in `migrate-adrs.mjs`; a fresh repo has none, so everything defaults
-  to `slice`. Init must prompt for or detect the architectural set (ADR-0003).
+- [feature] `/init-method` needs a survey step to supply the architectural `type:` set.
+  `migrate-adrs.mjs` now takes it as `--arch=id,id,...` (default: boxel's 22-id survey),
+  proven on gamatar's all-architecture corpus — but a fresh repo still has no set, so init
+  must prompt for or detect it and pass `--arch`. Without that, everything defaults to
+  `slice` (ADR-0003).
 - [audit] 4 boxel ADRs are `type: batch` by title (`0061, 0070, 0074, 0106`); roughly 8
   more are batches by *content* under ordinary titles, left as `slice` because no textual
   signal separates them — the same absence that motivates ADR-0002. Decide whether batch is

@@ -24,14 +24,18 @@ import { execFileSync } from 'node:child_process';
 import { scanLegacy, findDefects } from './scan-legacy.mjs';
 
 /**
- * The 22 architectural ids from the corpus survey: decisions later work must obey
+ * The 22 architectural ids from boxel's corpus survey: decisions later work must obey
  * (a mechanism, data format, or boundary). Everything else is a feature work-unit.
  *
  * Seeded from a hand survey rather than inferred. There is no textual signal that
  * separates the two kinds — that absence is the reason ADR-0002 exists — so a heuristic
  * here would be a guess wearing a script's authority.
+ *
+ * This is boxel's set, and it is only a default. The architectural set is per-repo — a
+ * fact the deferred `/init-method` survey step exists to capture — so any other corpus
+ * must pass its own via the `architecture` option (CLI: `--arch=0001,0002,...`).
  */
-const ARCHITECTURE = new Set(
+const DEFAULT_ARCHITECTURE = new Set(
   ['0001', '0002', '0003', '0004', '0005', '0006', '0009', '0010', '0011', '0012',
    '0013', '0014', '0021', '0025', '0036', '0041', '0051', '0054', '0057', '0068',
    '0122', '0123'],
@@ -87,7 +91,7 @@ function renderFrontmatter(fields) {
   ].join('\n');
 }
 
-export function planMigration(root) {
+export function planMigration(root, { architecture = DEFAULT_ARCHITECTURE } = {}) {
   const records = scanLegacy(root);
 
   return records.map((record) => {
@@ -109,7 +113,7 @@ export function planMigration(root) {
     const fields = {
       id: record.id,
       title: record.title,
-      type: ARCHITECTURE.has(record.id) ? 'architecture' : isBatch(record) ? 'batch' : 'slice',
+      type: architecture.has(record.id) ? 'architecture' : isBatch(record) ? 'batch' : 'slice',
       status: record.status,
       date,
       supersedes: record.supersedes.sort(),
@@ -168,11 +172,16 @@ function report(root, plan, verbose) {
 function main(argv) {
   const root = argv.find((a) => !a.startsWith('--'));
   if (!root) {
-    console.error('usage: migrate-adrs.mjs <repo-root> [--apply] [--verbose]');
+    console.error('usage: migrate-adrs.mjs <repo-root> [--apply] [--verbose] [--arch=0001,0002,...]');
     return 2;
   }
 
-  const plan = planMigration(root);
+  const archArg = argv.find((a) => a.startsWith('--arch='));
+  const architecture = archArg
+    ? new Set(archArg.slice('--arch='.length).split(',').map((s) => s.trim()).filter(Boolean))
+    : undefined;
+
+  const plan = planMigration(root, { architecture });
   report(root, plan, argv.includes('--verbose'));
 
   const blocked = plan.filter((p) => p.action === 'block');
