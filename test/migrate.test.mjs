@@ -107,6 +107,27 @@ test('the date stated in the document beats the date git recorded', () => {
   assert.equal(dated.fields.date, '2026-07-06');
 });
 
+test('a supersession date is not mistaken for the decision date', () => {
+  // `Status: superseded (2026-07-20) by ADR-0008` dates the *transition*. Reading it as
+  // the decision date backdates the ADR to the day it died — gamatar's 0005 was decided
+  // 2026-07-18 and would have claimed 07-20, the same day as the ADR that replaced it.
+  // Only a transition header is affected; an accepted header still wins over git.
+  const root = scratch({
+    '0005-replaced.md': [
+      '# ADR 0005 — Replaced',
+      '',
+      '- Status: superseded (2026-07-20) by [ADR-0008](0008-next.md)',
+      '',
+    ].join('\n'),
+  });
+
+  const [p] = planMigration(root);
+  // Outside git there is no better source, so the transition date is used — but it is
+  // labelled as such, so a migration summary shows how many dates are approximate.
+  assert.equal(p.dateSource, 'transition');
+  rmSync(root, { recursive: true, force: true });
+});
+
 test('a dateless file outside git is blocked rather than given an invented date', () => {
   const root = scratch({
     '0001-undated.md': ['# ADR 0001 — Undated', '', '## Status', '', 'Accepted.', ''].join('\n'),

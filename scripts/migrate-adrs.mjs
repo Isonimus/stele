@@ -52,11 +52,20 @@ const ISO_DATE = /\b(20\d{2}-\d{2}-\d{2})\b/;
  * Preference order matters. The status blob's own date is the author's claim about when
  * the decision was made; the git date only says when the file landed. For design-first
  * ADRs those differ, and the document's own account wins.
+ *
+ * The exception is a header that records a *transition*. `Status: superseded (2026-07-20)`
+ * dates the supersession, not the decision — reading it as the decision date backdates the
+ * ADR to the day it died. Those headers carry no decision date at all, so git's add date is
+ * the only honest source.
  */
+const TRANSITION_STATUS = new Set(['superseded', 'amended']);
+
 function resolveDate(root, record, text) {
   const header = text.split('\n').slice(0, 12).join('\n');
   const stated = header.match(ISO_DATE);
-  if (stated) return { date: stated[1], source: 'stated' };
+  if (stated && !TRANSITION_STATUS.has(record.status)) {
+    return { date: stated[1], source: 'stated' };
+  }
 
   try {
     const out = execFileSync(
@@ -69,6 +78,10 @@ function resolveDate(root, record, text) {
   } catch {
     // Not a git repo, or the file is untracked. Fall through.
   }
+
+  // A transition header's date is imprecise, but it beats blocking the migration on a
+  // file git has never seen.
+  if (stated) return { date: stated[1], source: 'transition' };
 
   return { date: null, source: 'none' };
 }
