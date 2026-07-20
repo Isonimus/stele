@@ -1,0 +1,29 @@
+#!/bin/sh
+# claude-method pre-commit hook — the load-bearing enforcement decision (ADR-0003).
+#
+# A linter nobody runs is another convention resting on memory, which is the failure this
+# project exists to fix. This hook makes the checks mechanical: no green corpus, no commit.
+# CI (.github/workflows/docs.yml) is the backstop for clones without the hook installed.
+#
+# Install: ln -sf ../../.claude/hooks/pre-commit .git/hooks/pre-commit
+# (/init-method does this; see ADR-0003. Do NOT install on a linter-red corpus — fix the
+#  reds first, or every commit is blocked. See LEDGER.)
+#
+# Bypass in a genuine emergency with `git commit --no-verify`; CI still catches it.
+
+set -e
+
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node not found on PATH — cannot run doc checks." >&2
+  exit 1
+fi
+
+# 1. Invariants must hold (rules 1–8 block; rule 9 warns). Zero-dependency, so no install.
+node scripts/lint-docs.mjs .
+
+# 2. The generated index must match the corpus. A stale INDEX.md is drift by another name;
+#    regenerate and stage it rather than letting it fall behind.
+node scripts/build-index.mjs --check .

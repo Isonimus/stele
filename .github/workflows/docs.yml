@@ -1,0 +1,23 @@
+# CI backstop for the doc invariants (ADR-0003). The pre-commit hook is per-clone and
+# skippable with --no-verify; this runs on every push and PR so a commit that dodged the
+# hook still gets caught. Zero dependencies, so there is nothing to install.
+name: docs
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # Invariants (rules 1–8 fail the build; rule 9 warns).
+      - run: node scripts/lint-docs.mjs .
+      # The generated index must match the corpus — a stale INDEX.md fails here.
+      - run: node scripts/build-index.mjs --check .
+      # The invariant checks are themselves tested.
+      - run: node --test test/*.test.mjs

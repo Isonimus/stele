@@ -12,7 +12,6 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -104,28 +103,11 @@ test('every record resolves to a known status', () => {
   }
 });
 
-// --- integration: the real corpus, when present ------------------------------
-
-const boxel = '/home/iker/local_repo/boxel';
-
-test('boxel corpus yields the same four defects', { skip: !existsSync(boxel) }, () => {
-  const records = scanLegacy(boxel);
-  assert.equal(records.length, 130);
-
-  // Dialect and status census must match the hand survey exactly.
-  const dialects = records.reduce((a, r) => ({ ...a, [r.dialect]: (a[r.dialect] ?? 0) + 1 }), {});
-  assert.deepEqual(dialects, { heading: 68, inline: 62 });
-
-  const unmapped = records.filter((r) => !r.status);
-  assert.deepEqual(unmapped, [], 'every one of the 130 must yield a status');
-
-  const summary = findDefects(records)
-    .map((d) => `${d.kind}:${d.id}${d.target ? `->${d.target}` : ''}`)
-    .sort();
-  assert.deepEqual(summary, [
-    'dangling:0061',
-    'one-way:0112->0122',
-    'one-way:0113->0122',
-    'one-way:0114->0122',
-  ]);
-});
+// A live-boxel integration test lived here: it scanned the real corpus and pinned its
+// file count (130), dialect census, and defect set. It validated the scanner against
+// ground truth before the one-time migration — which it did, successfully. That premise
+// has now expired: boxel is migrated and still growing (a parallel session added 0130),
+// so its count/census assertions can only break on boxel's own evolution, never catch a
+// claude-method regression — a fragile test by our own rule (§3). The frozen
+// `legacy-corpus` fixture reproduces all four defects and six traps; the "finds exactly
+// the four genuine defects" test above is the durable known-answer guard.

@@ -13,8 +13,6 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
 
 ## Open
 
-- [feature] `scripts/build-index.mjs` — generate `adr/INDEX.md` (supersession graph,
-  architecture-vs-slice view) from frontmatter (ADR-0001).
 - [feature] `/init-method` bootstrap so the kit installs into any git repo (ADR-0003).
 - [deferred] Rule 9 (bare `ADR NNNN` prose references) ships as a warning, not an error —
   567 legacy references exist in boxel and some point at external context. Revisit
@@ -32,9 +30,40 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   their console-error half in CI. They currently run never (ADR-0004).
 - [feature] gamatar has no verification harness at all despite the same untestable-render
   problem. Seed `scripts/` and a first verify script for the renderer (ADR-0004).
-- [audit] ~12 boxel ADRs are `type: batch` (several unrelated features in one document)
-  and cannot map 1:1 to a work item. Decide whether batches should be retired as a
-  practice going forward, or remain a legitimate document kind (ADR-0002).
+- [feature] **The pre-commit hook must not be installed on a repo whose corpus is linter-
+  red.** boxel was red on the three 0112/0113/0114→0122 pairs until they were hand-fixed;
+  a hook installed before that would have blocked every commit. Order for any repo:
+  (1) land the migration as one atomic commit, (2) hand-fix the red supersession pairs,
+  (3) only then install the hook. Record this ordering in `/init-method` (ADR-0003).
+- [feature] Rehome the *remaining* boxel memory files — ADR-0004 moved only `mob-egg-rule`
+  and `block-detail-default`. `boxel-no-backcompat-policy` → §5 invariant;
+  `chase-mc-fidelity` → §3 quality-bar ethos; `commit-message-style` → §6 (the template
+  covers trailers but not the evocative single-line style); `boxel-project-state` NEXT list
+  → ledger `[feature]` items. **Delete** `backlog-closure-convention` (ADR-0001 obsoletes
+  the dual-write rule) and `boxel-project-state`'s milestone log (a hand-maintained
+  changelog is the anti-pattern). Keep `iker-git-identity` and the easter eggs in memory —
+  operator/personal, per ADR-0004's split (ADR-0004).
+- [audit] Reference/technique knowledge has no home in the immutable/generated/mutable
+  taxonomy. boxel's `mc-texture-color-source` (how to fetch real MC textures and compute
+  authoritative colors) is neither a decision, a worklist item, nor a codebase invariant.
+  Candidate resolution: treat such docs as **live docs under the README precedent** (a
+  `docs/` tree, updated in the same change as the code they describe) rather than a new
+  mutable governance kind — and split the *decision* ("derive colors from real textures")
+  into an ADR from the *procedure*. This amends the governing taxonomy, so it is an
+  ADR-0001 amendment/supersession, not a filing tweak (ADR-0001).
+- [feature] Lint rule: every `type: slice` ADR must contain a `## Verification` section.
+  ADR-0004 requires it but nothing checks it; it is cheap and machine-checkable, unlike the
+  §5 invariants the ADR admits cannot be linted. Must be **warning-only on legacy** like
+  rule 9 — boxel's ~104 existing slices predate the rule and would otherwise go red
+  (ADR-0004).
+- [feature] `/init-method` needs a survey step. The architectural `type:` set is a hand-
+  seeded list of 22 ids in `migrate-adrs.mjs`; a fresh repo has none, so everything defaults
+  to `slice`. Init must prompt for or detect the architectural set (ADR-0003).
+- [audit] 4 boxel ADRs are `type: batch` by title (`0061, 0070, 0074, 0106`); roughly 8
+  more are batches by *content* under ordinary titles, left as `slice` because no textual
+  signal separates them — the same absence that motivates ADR-0002. Decide whether batch is
+  retired going forward or stays a legitimate kind, and retype the content-batches by hand
+  (ADR-0002).
 - [audit] 36 boxel ADRs carry dated `## Amendment` blocks. The `amended` status covers
   them, but whether an amendment should instead be a superseding ADR is unresolved
   (ADR-0002).
