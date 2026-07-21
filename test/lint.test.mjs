@@ -87,6 +87,25 @@ test('R9 warns on an unresolved prose reference but never errors', () => {
   assert.deepEqual(warnings('r9-prose-ref'), ['R9']);
 });
 
+test('R10 errors when the root holds no document directory at all', () => {
+  // The reported defect: pointed at boxel/adr rather than the repo root, the linter
+  // printed "0 document(s) — ok" and exited 0. A hook on a wrong path passed forever.
+  assert.deepEqual(errors('r10-wrong-root'), ['R10']);
+});
+
+test('R10 only warns when a document directory exists but is empty', () => {
+  // A scaffolded repo that has not written its first ADR is correctly configured, not
+  // misconfigured. Erroring here would fail `npm run lint` during install.
+  assert.deepEqual(errors('r10-empty-corpus'), []);
+  assert.deepEqual(warnings('r10-empty-corpus'), ['R10']);
+});
+
+test('R10 stays silent whenever any document is found', () => {
+  // Guards the early return: R10 must not fire alongside real per-document findings.
+  assert.ok(!errors('clean').includes('R10'));
+  assert.ok(!errors('r5-dangling').includes('R10'));
+});
+
 // --- frontmatter parser -----------------------------------------------------
 
 test('parser reads inline lists, block lists, and empty values', () => {

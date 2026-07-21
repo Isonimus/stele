@@ -24,11 +24,18 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   has `ISSUES.md`), no `scripts/`. Its new `CLAUDE.md` therefore omits the taxonomy,
   enforcement and verification sections — stating rules about files that do not exist
   would make the file false on arrival. Migrate the repo, then add them (ADR-0001).
-- [bug] **`lint-docs.mjs` reports a green pass when it finds zero documents.** Pointed at
-  `boxel/adr` instead of the repo root it printed `0 document(s) — ok` and exited 0. A hook
-  or CI job wired to a wrong path would pass forever while checking nothing — the exact
-  failure mode ADR-0003 exists to prevent, in the tool that enforces it. An empty corpus
-  should be an error (ADR-0003).
+- [done 2026-07-21] **`lint-docs.mjs` reported a green pass when it found zero documents.**
+  Pointed at `boxel/adr` instead of the repo root it printed `0 document(s) — ok` and
+  exited 0. Fixed as rule 10, with severity split against what the ledger originally asked
+  for: no `adr/` or `slices/` at the root is an error (the wrong-root case actually
+  observed), while a document directory that exists but is empty warns, so a freshly
+  scaffolded repo can still run `npm run lint` before its first ADR. Reasoning recorded in
+  the 2026-07-21 amendment to ADR-0003, which moves to `status: amended`. Fixtures
+  `r10-wrong-root` and `r10-empty-corpus` pin both branches.
+- [bug] **The `codes()` helper in `test/lint.test.mjs` read rule numbers as `slice(0, 2)`,**
+  so `R10` was indistinguishable from `R1` and rule 10's tests would have passed against
+  rule 1's findings. Fixed to `match(/^R\d+/)` while adding rule 10 — logged because it is
+  a latent trap for every rule past nine, not because it is still open. [done 2026-07-21]
 - [deferred] Rule 9 (bare `ADR NNNN` prose references) ships as a warning, not an error —
   567 legacy references exist in boxel and some point at external context. Revisit
   promoting it to an error once the corpus is migrated and the true failure rate is

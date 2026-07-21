@@ -2,7 +2,7 @@
 id: 0003
 title: Invariants are enforced by a hook, not by memory
 type: architecture
-status: accepted
+status: amended
 date: 2026-07-20
 supersedes: []
 superseded_by: []
@@ -82,3 +82,30 @@ Frontmatter's closed seven-field schema (ADR-0002) is small enough to parse by h
   chosen so that anything advisory warns rather than blocks.
 - The rules encode today's failures. New failure modes mean new rules — the rule table is
   expected to grow, and each addition should cite the incident that motivated it.
+
+## Amendment — 2026-07-21: rule 10, a non-empty corpus
+
+The decision above anticipated this: *"new failure modes mean new rules — the rule table
+is expected to grow, and each addition should cite the incident that motivated it."*
+
+**Incident.** During the boxel migration survey the linter was pointed at `boxel/adr`
+rather than the boxel root. It printed `0 document(s) — ok` and exited 0. `loadDocs` looks
+for `adr/` and `slices/` *beneath* the path it is given; `boxel/adr` contains neither, so
+it loaded nothing, no rule fired, and an empty finding list rendered as a pass. A hook or
+CI job wired to a wrong path would have gone green forever while checking nothing — the
+exact failure mode this ADR exists to prevent, in the tool that enforces it.
+
+| # | Rule | Severity |
+|---|---|---|
+| 10 | Corpus is non-empty: no `adr/` or `slices/` directory at the root | error |
+| 10 | Corpus is non-empty: directory present but holding no documents | warning |
+
+**Why the severity splits.** The ledger item asked for an empty corpus to be an error
+outright. That over-fires. The observed defect is the *wrong root* case, where neither
+document directory exists — and no repo using this method lacks both, so that is
+unambiguously an error. A repo whose `adr/` exists but is still empty is correctly
+scaffolded and merely new; erroring there would fail `npm run lint` during install, in a
+method whose whole purpose is being installed into fresh repos. It warns loudly instead.
+
+Rule 10 is checked before the per-document rules and returns immediately once any document
+is found, so it never fires alongside a real finding.

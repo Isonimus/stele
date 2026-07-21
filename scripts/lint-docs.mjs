@@ -16,6 +16,7 @@ import { join, basename } from 'node:path';
 const STATUSES = ['accepted', 'proposed', 'superseded', 'amended'];
 const TYPES = ['architecture', 'slice', 'batch'];
 const REQUIRED = ['id', 'title', 'type', 'status', 'date'];
+const DOC_DIRS = ['adr', 'slices'];
 
 // --- frontmatter ------------------------------------------------------------
 
@@ -91,7 +92,7 @@ export function parseFrontmatter(text) {
 // --- loading ----------------------------------------------------------------
 
 export function loadDocs(root) {
-  const dirs = ['adr', 'slices'].map((d) => join(root, d)).filter(existsSync);
+  const dirs = DOC_DIRS.map((d) => join(root, d)).filter(existsSync);
   const docs = [];
 
   for (const dir of dirs) {
@@ -110,6 +111,25 @@ export function loadDocs(root) {
 // Every rule traces to an observed failure; see the table in ADR-0003.
 
 const rules = {
+  // R10 — a linter that finds nothing must not report success. Pointed at `boxel/adr`
+  // rather than the repo root, this printed "0 document(s) — ok" and exited 0: a hook
+  // wired to a wrong path would go green forever while checking nothing, which is the
+  // exact failure mode this file exists to prevent.
+  //
+  // Severity splits on *why* the corpus is empty. No adr/ or slices/ at all means the
+  // root is wrong — no repo using this method lacks both, so that is an error. Dirs that
+  // exist but hold no documents are a correctly-scaffolded repo that has not written its
+  // first ADR yet; erroring there would fail `npm run lint` during install, so it warns.
+  corpus(docs, root, report) {
+    if (docs.length > 0) return;
+    const present = DOC_DIRS.filter((d) => existsSync(join(root, d)));
+    if (present.length === 0) {
+      report('error', root, `R10 no ${DOC_DIRS.join('/ or ')}/ directory here — is this the repo root?`);
+    } else {
+      report('warn', root, `R10 ${present.map((d) => `${d}/`).join(' and ')} present but empty — no documents to check`);
+    }
+  },
+
   // R1 — frontmatter present, parseable, required fields non-empty.
   frontmatter(docs, _root, report) {
     for (const d of docs) {
@@ -294,7 +314,10 @@ function main(argv) {
     }
     for (const f of [...errs, ...warns]) {
       const tag = f.severity === 'error' ? 'ERROR' : ' WARN';
-      console.log(`  ${tag}  ${basename(f.path)}: ${f.message}`);
+      // Corpus-level findings are reported against the root itself; basename would render
+      // it as "adr: no adr/ directory here", which reads as a contradiction.
+      const where = f.path === root ? root : basename(f.path);
+      console.log(`  ${tag}  ${where}: ${f.message}`);
     }
     if (!findings.length && !quiet) console.log('  ok');
   }
