@@ -14,11 +14,13 @@ import { lint, parseFrontmatter } from '../scripts/lint-docs.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 const fixture = (name) => join(here, 'fixtures', name);
 
-/** Rule codes reported at a given severity, e.g. ['R4', 'R7']. */
+/** Rule codes reported at a given severity, e.g. ['R4', 'R7'].
+ *  Matched by pattern rather than sliced to a fixed width: at ten rules a slice(0, 2)
+ *  reads "R10" as "R1" and the two become indistinguishable. */
 function codes(name, severity) {
   return lint(fixture(name))
     .findings.filter((f) => f.severity === severity)
-    .map((f) => f.message.slice(0, 2))
+    .map((f) => f.message.match(/^R\d+/)[0])
     .sort();
 }
 
