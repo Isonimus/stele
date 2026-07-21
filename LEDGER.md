@@ -20,13 +20,6 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   silently if this repo moves: global conventions would vanish with no error, since a
   missing `~/.claude/CLAUDE.md` is a legal state. A `--check` mode that verifies the link
   resolves is the cheap guard (ADR-0003).
-- [bug] **`templates/CLAUDE.md` is itself the dual-write ADR-0005 rejects.** Its §3, §6,
-  §7 and §8 restate the global quality bar, commit rules, operator-may-be-wrong clause and
-  token economy verbatim, so scaffolding from it copies general practice into every repo
-  with no sync path — the rejected alternative, executed by the tool meant to prevent it.
-  Strip those sections and replace them with a pointer to `~/.claude/CLAUDE.md`, leaving
-  only the repo-specific frame (taxonomy, enforcement, verification harness, invariants
-  table). l33t-mmorpg was scaffolded lean by hand instead of from the template (ADR-0005).
 - [feature] l33t-mmorpg is not method-migrated: no `adr/` tree, no `LEDGER.md` (it still
   has `ISSUES.md`), no `scripts/`. Its new `CLAUDE.md` therefore omits the taxonomy,
   enforcement and verification sections — stating rules about files that do not exist
@@ -42,8 +35,9 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   rewrite 567 cross-references for no additional query power (ADR-0002).
 - [feature] **boxel has no `CLAUDE.md` at all** — a prerequisite for both memory-rehoming
   items below, which say "into its `CLAUDE.md` §5" as though the file existed. Scaffold it
-  from `templates/CLAUDE.md` (which now carries the ADR-violation correction clause) before
-  rehoming anything (ADR-0004).
+  from `templates/CLAUDE.md`, whose invariants table is now §4 — the rehoming items below
+  still say §5, from before the template dropped its duplicated global sections
+  (ADR-0004).
 - [feature] Migrate boxel's `mob-egg-rule` and `block-detail-default` out of assistant
   memory into its `CLAUDE.md` §5 invariants table, keeping the GLASS exception and its
   reason. Was scoped to Phase 3, which shipped gamatar-only; blocked on the missing

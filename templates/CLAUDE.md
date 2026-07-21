@@ -4,6 +4,11 @@
 
 Stack: {{STACK}}
 
+General working practices — quality bar, commit hygiene, delegation, correction, language
+— live in `~/.claude/CLAUDE.md` and apply here without being restated. This file carries
+only what is specific to **this** repo. Restating a global rule here would create a second
+copy with no sync path, which is the failure ADR-0005 exists to prevent.
+
 ## 1. Document taxonomy — immutable or generated
 
 Every document is exactly one of three things. There is no fourth.
@@ -30,6 +35,10 @@ Changing our minds means writing a **new** ADR that supersedes the old one, neve
 it. The superseding note must say *why the old reasoning was wrong* — that record is the
 most valuable thing this workflow produces, and an in-place edit destroys it.
 
+This is also how a justified rule-violation gets recorded. `~/.claude/CLAUDE.md` §2 says a
+justified violation is written down as a decision rather than taken as a silent exception;
+in this repo, that decision is a new or superseding ADR.
+
 ## 2. Enforcement — invariants are executable
 
 `node scripts/lint-docs.mjs` runs from a pre-commit hook and in CI.
@@ -40,17 +49,7 @@ rather than writing it down and trusting it.
 
 Run `/wrap-up` before finishing a task.
 
-## 3. Quality bar
-
-- **Every relevant piece of logic gets a regression test.** No excuses — and no
-  irrelevant, duplicate, or fragile tests either. Tests are codebase: same standards,
-  same strict typing.
-- **Never use `any`.** Use `unknown` + narrowing, generics, or proper types.
-- Industry standards. No hacks, no quick fixes. Find the root cause and fix it for good.
-- **Boyscout rule:** leave every touched file better than found. A noticed bug is ours
-  even if we didn't introduce it — fix it, or log it in `LEDGER.md` if deferred.
-
-## 4. Verification harness — measure, don't assume
+## 3. Verification harness — measure, don't assume
 
 Some changes cannot be asserted in a unit test: rendering, world generation, physics,
 timing, anything whose correctness is "does it look and behave right at runtime". The
@@ -76,14 +75,15 @@ Probes are the same tool used before the fact: when a design question has a meas
 answer (how many caves per chunk, what the frame cost is), write `scripts/<topic>-probe.mjs`
 and put the **measured numbers** in the ADR. Design decisions cite data, not estimates.
 
-## 5. Standing invariants
+## 4. Standing invariants
 
 Repo-specific definition-of-done rules. A slice is not complete until it satisfies every
 one that applies. Each cites the ADR that created it; exceptions are listed with the
 reason, so nobody "fixes" a deliberate choice.
 
 These live **here, in the repo** — not in assistant memory. A rule that governs the
-codebase must be greppable, diffable, reviewable, and survive a change of machine.
+codebase must be greppable, diffable, reviewable, and survive a change of machine
+(ADR-0005).
 
 | # | Invariant | Source |
 |---|---|---|
@@ -91,35 +91,3 @@ codebase must be greppable, diffable, reviewable, and survive a change of machin
 
 When an ADR's consequences create a rule that all *future* work must follow, add the row
 in the same commit as the ADR.
-
-## 6. Commits
-
-- **No `Co-Authored-By` or generated-by trailers.** Plain conventional messages.
-- Ship the doc and the code in the same commit.
-
-## 7. The operator may be wrong
-
-The operator ({{OPERATOR}}) is not infallible. If a proposal or assumption is incorrect,
-say so directly, with data or a clear explanation. Don't defer to a wrong idea to be
-agreeable — the operator is glad to change their mind when proven wrong, and would rather
-be corrected early than build on a bad premise.
-
-This cuts both ways: when the evidence contradicts *our own* stated convention, report
-that too.
-
-Correction is not only for factual errors. When the operator asks for something that
-violates an ADR without a justifiable reason, or proposes a subpar fix, feature, or
-plan, push back the same way — with evidence and a concrete better option, argued from
-this repo's best-practices and ADR-conscious perspective. An operator can lack context a
-decision record already settled, so citing it *is* the correction. And if a violation
-turns out to be justified, that justification is a new (or superseding) ADR — never a
-silent exception.
-
-## 8. Token economy
-
-- The main model plans, reviews, corrects, and writes tests. Delegate rock-mining
-  (mechanical refactors, boilerplate, broad surveys) to cheaper subagents — **Haiku 4.5
-  for mechanical work, Sonnet 5 for work needing judgement** — instructed to return
-  minimal, structured output so the main context stays clean.
-- When context is deep and the task context is clearly switching, **tell the operator
-  it's a good moment to `/compact`** — they forget, and it causes context rot.
