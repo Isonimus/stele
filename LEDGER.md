@@ -24,6 +24,11 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   has `ISSUES.md`), no `scripts/`. Its new `CLAUDE.md` therefore omits the taxonomy,
   enforcement and verification sections — stating rules about files that do not exist
   would make the file false on arrival. Migrate the repo, then add them (ADR-0001).
+- [bug] **`lint-docs.mjs` reports a green pass when it finds zero documents.** Pointed at
+  `boxel/adr` instead of the repo root it printed `0 document(s) — ok` and exited 0. A hook
+  or CI job wired to a wrong path would pass forever while checking nothing — the exact
+  failure mode ADR-0003 exists to prevent, in the tool that enforces it. An empty corpus
+  should be an error (ADR-0003).
 - [deferred] Rule 9 (bare `ADR NNNN` prose references) ships as a warning, not an error —
   567 legacy references exist in boxel and some point at external context. Revisit
   promoting it to an error once the corpus is migrated and the true failure rate is
