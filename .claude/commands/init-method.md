@@ -41,7 +41,24 @@ edit its own copy of `/slice` or `/wrap-up` to say something repo-specific, and 
 install keeps that edit rather than overwriting it. If you edit one, say so — an edit
 made in an installed repo does not travel back to the toolkit.
 
-## 3. If it refused the hook
+## 3. If the repo already has a hook framework
+
+A target with a `.pre-commit-config.yaml` gets the doc checks **composed into it** as a
+`repo: local` block rather than a symlink (ADR-0008) — the framework owns
+`.git/hooks/pre-commit`, and a symlink there is silently erased by the next
+`pre-commit install`. The append is idempotent and additive; the existing config is
+never reordered or rewritten, and `--update` leaves it alone.
+
+Two things to watch:
+
+- A config the script does not recognise (no top-level `repos:`) is **refused**, not
+  guessed at. Add the block by hand and say you did.
+- `--check` reports a problem when the framework is configured but never installed. That
+  is not our hook failing — it means *no* hook runs, including the repo's own ruff and
+  mypy. Tell the operator to run `pre-commit install`; do not paper over it by
+  symlinking ours instead.
+
+## 4. If it refused the hook
 
 A refusal is normal on a repo that already has work in it, and the reason is almost
 always **rule 11: a `scripts/*-verify.mjs` that no `package.json` command runs**. An
@@ -60,7 +77,7 @@ Fix it, in this order — the order is the whole point:
 
 Do **not** edit the target's `package.json` without telling the operator what you added.
 
-## 4. Finish the scaffold
+## 5. Finish the scaffold
 
 If `CLAUDE.md` was newly scaffolded it contains `{{PLACEHOLDER}}` fields. Fill them from
 the repo itself — read the README, the manifest, the source layout. Do not invent a
@@ -68,7 +85,7 @@ project description. Then delete the sections that describe machinery the repo d
 have: a verification-harness section in a repo with no `scripts/` states rules about
 files that do not exist, which makes the file false on arrival.
 
-## 5. Verify, and say what happened
+## 6. Verify, and say what happened
 
 ```
 node scripts/init-method.mjs <target> --check

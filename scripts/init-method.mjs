@@ -57,6 +57,33 @@ const GLOBAL_LINK = 'global/CLAUDE.md';
 /** What .git/hooks/pre-commit must point at to count as installed. */
 const HOOK_LINK_TARGET = '../../.claude/hooks/pre-commit';
 
+/** A repo using the `pre-commit` framework gets the checks composed into its config
+ *  instead of a symlink, because that framework owns the same file (ADR-0008). */
+const FRAMEWORK_CONFIG = '.pre-commit-config.yaml';
+
+/** Identifies our block on re-runs, so composing is idempotent. */
+const FRAMEWORK_HOOK_ID = 'claude-method-docs';
+
+/** Appended verbatim. Mirrors .claude/hooks/pre-commit — the same two commands. */
+const FRAMEWORK_BLOCK = `
+  # Doc invariants (claude-method ADR-0003, composed by /init-method per ADR-0008).
+  # Zero-dependency and language: system, so there is nothing to install but node.
+  - repo: local
+    hooks:
+      - id: ${FRAMEWORK_HOOK_ID}
+        name: doc invariants hold
+        entry: node scripts/lint-docs.mjs .
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: claude-method-index
+        name: adr/INDEX.md matches the corpus
+        entry: node scripts/build-index.mjs --check .
+        language: system
+        pass_filenames: false
+        always_run: true
+`;
+
 const read = (path) => readFileSync(path, 'utf8');
 
 /** lstat that answers "what is here?" without throwing on absent. */
@@ -212,6 +239,8 @@ function installHook({ target, apply, report }) {
     return;
   }
 
+  if (existsSync(join(target, FRAMEWORK_CONFIG))) return composeHook({ target, apply, report });
+
   const path = join(target, '.git', 'hooks', 'pre-commit');
   if (isSymlink(path) && readlinkSync(path) === HOOK_LINK_TARGET && existsSync(path)) {
     return report('ok', path, 'hook installed');
@@ -225,6 +254,40 @@ function installHook({ target, apply, report }) {
   if (isSymlink(path)) unlinkSync(path);
   symlinkSync(HOOK_LINK_TARGET, path);
   report('wrote', path, `linked → ${HOOK_LINK_TARGET}`);
+}
+
+/**
+ * Joins the pre-commit framework instead of taking .git/hooks/pre-commit (ADR-0008).
+ *
+ * A symlink here would work until the next `pre-commit install`, which replaces the file
+ * with no error and takes the doc checks with it — a guarantee a third party can revoke
+ * silently is not a guarantee.
+ */
+function composeHook({ target, apply, report }) {
+  const path = join(target, FRAMEWORK_CONFIG);
+  const config = read(path);
+
+  // Refuse rather than guess: this is a textual append into a file we do not own.
+  if (!/^repos:/m.test(config)) {
+    return report('problem', path, 'no top-level `repos:` key — unrecognised shape, refusing to edit it. Add the claude-method-docs block by hand.');
+  }
+
+  if (config.includes(FRAMEWORK_HOOK_ID)) report('ok', path, 'doc checks composed into the framework');
+  else if (!apply) report('would', path, 'append the doc checks as a `repo: local` block');
+  else {
+    writeFileSync(path, `${config.replace(/\n*$/, '\n')}${FRAMEWORK_BLOCK}`);
+    report('wrote', path, 'appended the doc checks as a `repo: local` block');
+  }
+
+  frameworkInstalled({ target, report });
+}
+
+/** The framework's own dispatcher. Configured-but-not-installed means nothing runs at
+ *  all, while the config still reads as protection. */
+function frameworkInstalled({ target, report }) {
+  const hook = join(target, '.git', 'hooks', 'pre-commit');
+  if (existsSync(hook)) report('ok', hook, 'the framework dispatcher is installed');
+  else report('problem', hook, 'the pre-commit framework is configured but never installed — no hook runs at all, including its own. Run `pre-commit install`.');
 }
 
 function check({ target, toolkit, report }) {
@@ -244,8 +307,15 @@ function check({ target, toolkit, report }) {
     else report('ok', to, 'current');
   }
 
+  // The framework's presence is the single discriminator, so --check cannot disagree
+  // with --apply about which install shape is in force (ADR-0008).
+  const framework = join(target, FRAMEWORK_CONFIG);
   const hook = join(target, '.git', 'hooks', 'pre-commit');
-  if (!isSymlink(hook)) report('problem', hook, 'no hook installed — nothing checks commits');
+  if (existsSync(framework)) {
+    if (read(framework).includes(FRAMEWORK_HOOK_ID)) report('ok', framework, 'doc checks composed into the framework');
+    else report('problem', framework, 'the pre-commit framework runs here but not the doc checks — run /init-method --apply');
+    frameworkInstalled({ target, report });
+  } else if (!isSymlink(hook)) report('problem', hook, 'no hook installed — nothing checks commits');
   else if (!existsSync(hook)) report('problem', hook, `broken symlink → ${readlinkSync(hook)}; commits are unchecked and silent about it`);
   else report('ok', hook, 'hook installed and resolving');
 

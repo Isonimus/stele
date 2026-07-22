@@ -232,6 +232,70 @@ test('a deleted command is reported by --check without failing it', () => {
   assert.deepEqual(statuses(actions, 'commands/audit.md'), ['missing']);
 });
 
+const FRAMEWORK_CONFIG = `repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+`;
+
+test('a repo using the pre-commit framework gets the checks composed, not a symlink', () => {
+  const { target, home } = scratchRepo();
+  writeFileSync(join(target, '.pre-commit-config.yaml'), FRAMEWORK_CONFIG);
+
+  run({ target, home, apply: true });
+
+  const config = readFileSync(join(target, '.pre-commit-config.yaml'), 'utf8');
+  assert.ok(config.startsWith(FRAMEWORK_CONFIG), 'the existing config must survive verbatim');
+  assert.match(config, /id: claude-method-docs/);
+  assert.match(config, /id: claude-method-index/);
+  assert.equal(
+    existsSync(join(target, '.git', 'hooks', 'pre-commit')),
+    false,
+    'the framework owns that file — taking it would be silently undone by `pre-commit install`',
+  );
+});
+
+test('composing is idempotent — a second run appends nothing', () => {
+  const { target, home } = scratchRepo();
+  writeFileSync(join(target, '.pre-commit-config.yaml'), FRAMEWORK_CONFIG);
+  run({ target, home, apply: true });
+  const once = readFileSync(join(target, '.pre-commit-config.yaml'), 'utf8');
+
+  run({ target, home, apply: true });
+
+  const twice = readFileSync(join(target, '.pre-commit-config.yaml'), 'utf8');
+  assert.equal(twice, once, 'a re-run must not append a second copy');
+  assert.equal(twice.match(/id: claude-method-docs/g)?.length, 1, 'the block must be present exactly once');
+});
+
+test('a configured-but-uninstalled framework is a problem, because nothing runs at all', () => {
+  const { target, home } = scratchRepo();
+  writeFileSync(join(target, '.pre-commit-config.yaml'), FRAMEWORK_CONFIG);
+  run({ target, home, apply: true });
+
+  const { actions, problems } = run({ target, home, mode: 'check' });
+
+  assert.equal(problems, 1);
+  assert.ok(actions.some((a) => a.status === 'problem' && /`pre-commit install`/.test(a.message)));
+
+  // Once the framework's own dispatcher exists, the install is complete.
+  mkdirSync(join(target, '.git', 'hooks'), { recursive: true });
+  writeFileSync(join(target, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\n# framework\n');
+  assert.equal(run({ target, home, mode: 'check' }).problems, 0);
+});
+
+test('an unrecognised pre-commit config is refused, never guessed at', () => {
+  const { target, home } = scratchRepo();
+  writeFileSync(join(target, '.pre-commit-config.yaml'), 'something: else\n');
+
+  const { actions, problems } = run({ target, home, apply: true });
+
+  assert.ok(problems > 0);
+  assert.ok(actions.some((a) => a.status === 'problem' && /refusing to edit it/.test(a.message)));
+  assert.equal(readFileSync(join(target, '.pre-commit-config.yaml'), 'utf8'), 'something: else\n');
+});
+
 test('a directory that is not a git repo is refused', () => {
   const { root, home } = scratchRepo();
   const notARepo = join(root, 'plain');
