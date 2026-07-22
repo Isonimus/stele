@@ -26,6 +26,19 @@ const normId = (v) => String(v).trim().padStart(4, '0');
 
 const isId = (v) => /^\d{1,4}$/.test(String(v).trim());
 
+// Citations, bare or qualified (ADR-0009). A leading `<repo>:` says the decision lives in
+// another repo's corpus, which this linter cannot open and so must skip. The colon has to
+// be adjacent, leaving an ordinary sentence ending in a colon ("see also: ADR-0004")
+// resolving locally as before.
+const CITATION = /(?:([A-Za-z][\w.-]*):)?ADR[-\s](\d{1,4})/g;
+
+/** Ids cited in `text` that this repo is expected to own — cross-repo refs skipped. */
+function* localCitations(text) {
+  for (const [, repo, id] of text.matchAll(CITATION)) {
+    if (repo === undefined) yield normId(id);
+  }
+}
+
 /**
  * Parses a flat scalar: quoted string, inline list, or bare value.
  *
@@ -258,9 +271,9 @@ const rules = {
 
     const text = readFileSync(path, 'utf8');
     text.split('\n').forEach((line, i) => {
-      for (const m of line.matchAll(/ADR[-\s](\d{1,4})/g)) {
-        if (!ids.has(normId(m[1]))) {
-          report('error', path, `R8 line ${i + 1} cites ADR ${normId(m[1])}, which does not exist`);
+      for (const id of localCitations(line)) {
+        if (!ids.has(id)) {
+          report('error', path, `R8 line ${i + 1} cites ADR ${id}, which does not exist. Another repo's decision is cited as \`<repo>:ADR-${id}\` (ADR-0009).`);
         }
       }
     });
@@ -308,13 +321,17 @@ const rules = {
   // R9 — prose cross-references. Warning only, deliberately: boxel carries 567 bare
   // references, some pointing at external or historical context. Failing the build on
   // those would make the linter something to disable rather than obey.
+  //
+  // Since ADR-0009 a bare reference means unambiguously "in this repo" — the other-repo
+  // case has its own syntax — so the remaining obstacle to erroring here is boxel's
+  // legacy volume alone, not the mechanism.
   proseRefs(docs, _root, report) {
     const ids = new Set(docs.filter((d) => d.ok && d.data.id !== undefined).map((d) => normId(d.data.id)));
     for (const d of docs) {
       if (!d.ok || !d.body) continue;
       const unresolved = new Set();
-      for (const m of d.body.matchAll(/ADR[-\s](\d{1,4})/g)) {
-        if (!ids.has(normId(m[1]))) unresolved.add(normId(m[1]));
+      for (const id of localCitations(d.body)) {
+        if (!ids.has(id)) unresolved.add(id);
       }
       for (const ref of [...unresolved].sort()) {
         report('warn', d.path, `R9 prose references ADR ${ref}, which does not exist`);

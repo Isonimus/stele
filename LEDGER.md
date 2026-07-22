@@ -18,13 +18,10 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   enforcement and verification sections — stating rules about files that do not exist
   would make the file false on arrival. Migrate the repo, then add them (ADR-0001).
 - [deferred] Rule 9 (bare `ADR NNNN` prose references) ships as a warning, not an error —
-  567 legacy references exist in boxel and some point at external context. Revisit
-  promoting it to an error once the corpus is migrated and the true failure rate is
-  known (ADR-0003). Note rule 9 cannot distinguish a typo from a deliberate reference to
-  *another repo's* ADR — this repo's own ADRs trip it six times citing boxel and gamatar
-  ids. Promoting it to an error needs a way to mark cross-repo citations first. **Rule 8 has the
-  same gap and is already an error**: a ledger line citing another repo's decision fails,
-  so such citations must be written as paths (`boxel/adr/0134`) until the marking exists.
+  567 legacy references exist in boxel. Revisit promoting it to an error once that corpus
+  is migrated and the true failure rate is known (ADR-0003). The cross-repo obstacle is
+  gone: a bare reference now means unambiguously "in this repo" (ADR-0009), so what
+  remains is boxel's legacy volume alone.
 - [deferred] `slices/` directory and the ADR/slice split apply to **new** documents only.
   boxel's existing 130 keep `type:` in frontmatter instead — a physical split would
   rewrite 567 cross-references for no additional query power (ADR-0002).

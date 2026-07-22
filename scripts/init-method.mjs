@@ -232,6 +232,13 @@ function buildIndex({ target, apply, report }) {
  * memory, which is the failure this whole kit exists to fix.
  */
 function installHook({ target, apply, report }) {
+  // A dry run over a repo with no adr/ cannot judge the corpus: the linter would report
+  // R10 "no adr/ — is this the repo root?" against a directory --apply creates two steps
+  // earlier. Refusing on that would be a plan that contradicts what applying does.
+  if (!apply && !existsSync(join(target, 'adr'))) {
+    return report('would', join(target, '.git', 'hooks', 'pre-commit'), 'decide once adr/ exists — a dry run cannot check a corpus that has not been scaffolded yet');
+  }
+
   const errors = lintErrors(target);
   if (errors.length > 0) {
     for (const f of errors) report('problem', f.path, f.message);

@@ -239,6 +239,18 @@ const FRAMEWORK_CONFIG = `repos:
       - id: ruff
 `;
 
+test('a dry run over a repo with no adr/ does not predict a refusal that --apply disproves', () => {
+  const { target, home } = scratchRepo({ withAdr: false });
+
+  const dry = run({ target, home });
+  assert.equal(dry.problems, 0, 'the plan must not report a corpus error against a directory it plans to create');
+  assert.ok(dry.actions.some((a) => a.path.endsWith('hooks/pre-commit') && a.status === 'would'));
+
+  // ...and the plan holds: applying it really does install the hook.
+  assert.equal(run({ target, home, apply: true }).problems, 0);
+  assert.ok(existsSync(join(target, '.git', 'hooks', 'pre-commit')));
+});
+
 test('a repo using the pre-commit framework gets the checks composed, not a symlink', () => {
   const { target, home } = scratchRepo();
   writeFileSync(join(target, '.pre-commit-config.yaml'), FRAMEWORK_CONFIG);

@@ -11,3 +11,5 @@ superseded_by: [0002]
 ## Context
 
 Fixture.
+
+See gamatar:ADR-0005 for the corresponding decision in that repo.
