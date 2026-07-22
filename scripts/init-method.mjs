@@ -12,7 +12,7 @@
 // documents it would report "0 document(s) — ok" (the reason rule 10 exists), certifying
 // an install that checks nothing.
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, lstatSync, readlinkSync, symlinkSync, unlinkSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, lstatSync, readlinkSync, symlinkSync, unlinkSync, readdirSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
@@ -22,13 +22,29 @@ import { renderIndex } from './build-index.mjs';
 
 const TOOLKIT = dirname(dirname(fileURLToPath(import.meta.url)));
 
-/** Vendored into every installed repo: target path ← toolkit path. Copies rather than
- *  symlinks, because a symlink into this checkout resolves on one machine only. */
+/** Machinery vendored into every installed repo: target path ← toolkit path. Copies
+ *  rather than symlinks, because a symlink into this checkout resolves on one machine
+ *  only. These must stay byte-identical — a locally edited linter is a silently
+ *  different linter, so `--check` calls any difference a problem. */
 const VENDORED = [
   ['scripts/lint-docs.mjs', 'scripts/lint-docs.mjs'],
   ['scripts/build-index.mjs', 'scripts/build-index.mjs'],
   ['.claude/hooks/pre-commit', '.claude/hooks/pre-commit'],
 ];
+
+const COMMANDS_DIR = '.claude/commands';
+
+/**
+ * The slash commands, vendored too (ADR-0007) — same target path as toolkit path.
+ *
+ * Read from disk rather than listed, so a new command reaches installed repos without
+ * anyone remembering to extend an array here.
+ */
+const commandFiles = (toolkit) =>
+  readdirSync(join(toolkit, COMMANDS_DIR))
+    .filter((name) => name.endsWith('.md'))
+    .sort()
+    .map((name) => `${COMMANDS_DIR}/${name}`);
 
 /** Scaffolded once and never overwritten: target path ← template path. */
 const SCAFFOLD = [
@@ -119,6 +135,36 @@ function vendor({ target, toolkit, apply, report }) {
   }
 }
 
+/**
+ * Slash commands, which are prose and therefore adaptable (ADR-0007).
+ *
+ * Copy-if-absent, unlike vendor(): a repo that has tailored `/slice` to its own workflow
+ * must not have that overwritten by an install. `--update` is the explicit way to take
+ * the toolkit's version back.
+ */
+function vendorCommands({ target, toolkit, apply, force, report }) {
+  for (const path of commandFiles(toolkit)) {
+    const to = join(target, path);
+    const from = join(toolkit, path);
+    if (matches(to, from)) {
+      report('ok', to, 'current');
+      continue;
+    }
+    if (existsSync(to) && !force) {
+      report('keep', to, 'differs from the toolkit — left as it is; `--update` takes the toolkit version');
+      continue;
+    }
+    const verb = existsSync(to) ? 'overwrite' : 'copy';
+    if (!apply) {
+      report('would', to, `${verb} from toolkit`);
+      continue;
+    }
+    mkdirSync(dirname(to), { recursive: true });
+    copyFileSync(from, to);
+    report('wrote', to, `${verb === 'copy' ? 'copied' : 'overwritten'} from toolkit`);
+  }
+}
+
 function scaffold({ target, toolkit, apply, report }) {
   const adr = join(target, 'adr');
   if (!existsSync(adr)) {
@@ -189,6 +235,15 @@ function check({ target, toolkit, report }) {
     else report('ok', to, 'current');
   }
 
+  // Commands are prose a repo may legitimately adapt, so their drift is informational
+  // (ADR-0007) — reported so it is visible, never counted against a clean check.
+  for (const path of commandFiles(toolkit)) {
+    const to = join(target, path);
+    if (!existsSync(to)) report('missing', to, 'not installed — run /init-method --apply');
+    else if (!matches(to, join(toolkit, path))) report('local', to, 'differs from the toolkit — kept; `--update` takes the toolkit version');
+    else report('ok', to, 'current');
+  }
+
   const hook = join(target, '.git', 'hooks', 'pre-commit');
   if (!isSymlink(hook)) report('problem', hook, 'no hook installed — nothing checks commits');
   else if (!existsSync(hook)) report('problem', hook, `broken symlink → ${readlinkSync(hook)}; commits are unchecked and silent about it`);
@@ -228,9 +283,11 @@ export function initMethod({ target, toolkit = TOOLKIT, home = homedir(), mode =
     globalLink({ toolkit, home, apply: false, report });
   } else if (mode === 'update') {
     vendor({ target, toolkit, apply, report });
+    vendorCommands({ target, toolkit, apply, force: true, report });
   } else {
     scaffold({ target, toolkit, apply, report });
     vendor({ target, toolkit, apply, report });
+    vendorCommands({ target, toolkit, apply, force: false, report });
     buildIndex({ target, apply, report });
     installHook({ target, apply, report });
     globalLink({ toolkit, home, apply, report });

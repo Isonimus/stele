@@ -32,9 +32,14 @@ node scripts/init-method.mjs <target> --apply
 ```
 
 This scaffolds `adr/`, `CLAUDE.md` and `LEDGER.md` (never overwriting), vendors
-`lint-docs.mjs` / `build-index.mjs` / the hook, generates `adr/INDEX.md`, links
-`~/.claude/CLAUDE.md`, and installs the pre-commit hook **only if the corpus lints
-clean**.
+`lint-docs.mjs` / `build-index.mjs` / the hook and the slash commands, generates
+`adr/INDEX.md`, links `~/.claude/CLAUDE.md`, and installs the pre-commit hook **only if
+the corpus lints clean**.
+
+The commands are vendored under softer rules than the machinery (ADR-0007): a repo may
+edit its own copy of `/slice` or `/wrap-up` to say something repo-specific, and an
+install keeps that edit rather than overwriting it. If you edit one, say so — an edit
+made in an installed repo does not travel back to the toolkit.
 
 ## 3. If it refused the hook
 
@@ -69,10 +74,15 @@ files that do not exist, which makes the file false on arrival.
 node scripts/init-method.mjs <target> --check
 ```
 
-Writes nothing; fails on a missing or broken hook, a drifted vendored copy, a stale
+Writes nothing; fails on a missing or broken hook, a drifted vendored **script**, a stale
 index, a red corpus, or a broken `~/.claude/CLAUDE.md` link. Report its output verbatim
 rather than summarising it as "installed".
 
-`--update` re-copies the vendored scripts and hook when `--check` reports drift. It is
-the only way a toolkit fix reaches an installed repo — the copies are deliberate
-(ADR-0006), and drift is the price.
+`LOCAL` and `MISSING` lines are about commands only and are **not** failures — they say
+this repo adapted or declined one. Read them, mention them, do not "fix" them without
+asking; that is somebody's deliberate edit.
+
+`--update` re-copies the vendored scripts, the hook and the commands — for a command it
+discards a local edit, which is exactly what it is for. It is the only way a toolkit fix
+reaches an installed repo: the copies are deliberate (ADR-0006, ADR-0007), and drift is
+the price.

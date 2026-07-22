@@ -10,7 +10,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync, lstatSync, readlinkSync, readFileSync, appendFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync, lstatSync, readlinkSync, readFileSync, appendFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -179,6 +179,57 @@ test('--update restores a drifted copy and touches nothing else', () => {
     readFileSync(join(TOOLKIT, 'scripts', 'lint-docs.mjs'), 'utf8'),
   );
   assert.equal(readFileSync(join(target, 'CLAUDE.md'), 'utf8'), '# edited since install\n');
+});
+
+test('--apply vendors every slash command the toolkit ships', () => {
+  const { target, home } = scratchRepo();
+  run({ target, home, apply: true });
+
+  for (const name of readdirSync(join(TOOLKIT, '.claude', 'commands')).filter((n) => n.endsWith('.md'))) {
+    const vendored = join(target, '.claude', 'commands', name);
+    assert.ok(existsSync(vendored), `${name} was not vendored`);
+    assert.equal(readFileSync(vendored, 'utf8'), readFileSync(join(TOOLKIT, '.claude', 'commands', name), 'utf8'));
+  }
+});
+
+test('a repo edit to a command survives --apply and is reported, not counted against a clean check', () => {
+  const { target, home } = scratchRepo();
+  run({ target, home, apply: true });
+  const slice = join(target, '.claude', 'commands', 'slice.md');
+  writeFileSync(slice, '# our own slice workflow\n');
+
+  const install = run({ target, home, apply: true });
+  assert.equal(readFileSync(slice, 'utf8'), '# our own slice workflow\n', 'an install must not clobber an adapted command');
+  assert.deepEqual(statuses(install.actions, 'commands/slice.md'), ['keep']);
+
+  const { actions, problems } = run({ target, home, mode: 'check' });
+  assert.equal(problems, 0, 'command drift is informational — the install is not broken');
+  assert.deepEqual(statuses(actions, 'commands/slice.md'), ['local']);
+});
+
+test('--update takes the toolkit version of an adapted command back', () => {
+  const { target, home } = scratchRepo();
+  run({ target, home, apply: true });
+  const slice = join(target, '.claude', 'commands', 'slice.md');
+  writeFileSync(slice, '# our own slice workflow\n');
+
+  run({ target, home, mode: 'update', apply: true });
+
+  assert.equal(
+    readFileSync(slice, 'utf8'),
+    readFileSync(join(TOOLKIT, '.claude', 'commands', 'slice.md'), 'utf8'),
+  );
+});
+
+test('a deleted command is reported by --check without failing it', () => {
+  const { target, home } = scratchRepo();
+  run({ target, home, apply: true });
+  rmSync(join(target, '.claude', 'commands', 'audit.md'));
+
+  const { actions, problems } = run({ target, home, mode: 'check' });
+
+  assert.equal(problems, 0, 'a repo may decline a command; only machinery drift is a problem');
+  assert.deepEqual(statuses(actions, 'commands/audit.md'), ['missing']);
 });
 
 test('a directory that is not a git repo is refused', () => {
