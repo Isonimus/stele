@@ -9,15 +9,16 @@ General working practices — quality bar, commit hygiene, delegation, correctio
 only what is specific to **this** repo. Restating a global rule here would create a second
 copy with no sync path, which is the failure claude-method:ADR-0005 exists to prevent.
 
-## 1. Document taxonomy — immutable or generated
+## 1. Document taxonomy — four kinds
 
-Every document is exactly one of three things. There is no fourth.
+Every document is exactly one of four things.
 
 | Kind | Files | Rule |
 |---|---|---|
 | **Immutable** | `adr/*.md`, `slices/*.md` | Written once. Body prose is never edited. Only status/supersession fields may change. |
 | **Generated** | `adr/INDEX.md` | Built by script from frontmatter. Never hand-edited. |
-| **Mutable** | `LEDGER.md` | Exactly one per repo. The only file maintained by hand. |
+| **Ledger** | `LEDGER.md` | Exactly one per repo. The only hand-maintained tracker. |
+| **Live doc** | `README.md`, `docs/*.md` | Describes how something behaves *now*. Updated **in the same change** as the thing it describes, and cited from this file so it is never orphaned (claude-method:ADR-0010). |
 
 - **ADR** — a decision later work must obey (a mechanism, data format, or boundary).
   Asserts *"on date X we chose Y because Z"*: a historical claim, true forever.

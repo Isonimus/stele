@@ -2,10 +2,10 @@
 id: 0001
 title: Every document is either immutable or generated
 type: architecture
-status: amended
+status: superseded
 date: 2026-07-20
 supersedes: []
-superseded_by: []
+superseded_by: ['0010']
 ---
 
 # ADR 0001 — Every document is either immutable or generated

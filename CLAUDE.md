@@ -3,23 +3,25 @@
 A linted, installable ADR workflow for git projects using Claude as an assistant.
 This repo dogfoods its own method: its rules are its ADRs, and its linter checks itself.
 
-## 1. Document taxonomy — immutable or generated (ADR-0001)
+## 1. Document taxonomy — four kinds (ADR-0010, superseding ADR-0001)
 
-Every document is exactly one of three things. There is no fourth.
+Every document is exactly one of four things.
 
 | Kind | Files | Rule |
 |---|---|---|
 | **Immutable** | `adr/*.md`, `slices/*.md` | Written once. Body prose is never edited. Only status/supersession fields may change. |
 | **Generated** | `adr/INDEX.md` | Built by script from frontmatter. Never hand-edited. |
-| **Mutable** | `LEDGER.md` | Exactly one per repo. The only file humans maintain by hand. |
+| **Ledger** | `LEDGER.md` | Exactly one per repo. The only hand-maintained tracker. |
+| **Live doc** | `README.md`, `docs/*.md` | Describes how something behaves *now*. Updated **in the same change** as the thing it describes, and cited from `CLAUDE.md` so it is never orphaned. |
 
 - **ADR** — a decision that later work must obey (a mechanism, data format, or boundary).
   Asserts *"on date X we chose Y because Z"*: a historical claim, true forever.
 - **Slice** — one feature work-unit. Written before implementation, **frozen at merge**
   and rewritten to past tense: *"this is what shipped."* Freezing is what converts it
   from a current-state claim (always going stale) into a historical one (never stale).
-- **README.md** — live document; update it in the same change that alters any
-  user/dev-facing feature or API.
+- **README.md** — a live doc; update it in the same change that alters any
+  user/dev-facing feature or API. When something is both a choice and a procedure, the
+  choice becomes an ADR and the procedure a live doc that cites it (ADR-0010).
 
 **Single writer, one direction.** An ADR records a deferral *once*, as a fact about that
 decision. `LEDGER.md` cites the ADR. **Never reach back into an ADR to close a ledger

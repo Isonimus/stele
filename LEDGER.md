@@ -13,10 +13,6 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
 
 ## Open
 
-- [feature] l33t-mmorpg is not method-migrated: no `adr/` tree, no `LEDGER.md` (it still
-  has `ISSUES.md`), no `scripts/`. Its new `CLAUDE.md` therefore omits the taxonomy,
-  enforcement and verification sections — stating rules about files that do not exist
-  would make the file false on arrival. Migrate the repo, then add them (ADR-0001).
 - [deferred] Rule 9 (bare `ADR NNNN` prose references) ships as a warning, not an error —
   567 legacy references exist in boxel. Revisit promoting it to an error once that corpus
   is migrated and the true failure rate is known (ADR-0003). The cross-repo obstacle is
@@ -25,8 +21,10 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
 - [deferred] `slices/` directory and the ADR/slice split apply to **new** documents only.
   boxel's existing 130 keep `type:` in frontmatter instead — a physical split would
   rewrite 567 cross-references for no additional query power (ADR-0002).
-- [feature] gamatar has no verification harness at all despite the same untestable-render
-  problem. Seed `scripts/` and a first verify script for the renderer (ADR-0004).
+- [feature] gamatar still has no verify script despite the same untestable-render problem
+  as boxel: nothing renders an avatar headlessly and leaves an artifact to look at. Its
+  `scripts/` now exists (the vendored linter landed there 2026-07-22), so this is the
+  script itself, not the scaffolding (ADR-0004).
 - [audit] Reference/technique knowledge has no home in the immutable/generated/mutable
   taxonomy. boxel's `mc-texture-color-source` (how to fetch real MC textures and compute
   authoritative colors) is neither a decision, a worklist item, nor a codebase invariant.
