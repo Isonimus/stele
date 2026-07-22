@@ -13,26 +13,6 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
 
 ## Open
 
-- [feature] `/init-method` bootstrap so the kit installs into any git repo (ADR-0003).
-  **boxel has now run the whole flow by hand** (2026-07-22) and is the spec: scaffold
-  `CLAUDE.md` + `LEDGER.md`, wire every `scripts/*-verify.mjs` into `package.json`,
-  confirm `lint-docs.mjs` green **against the repo root**, generate `adr/INDEX.md`, and
-  only then symlink `.claude/hooks/pre-commit` into `.git/hooks/`. The order is
-  load-bearing: an unwired verify script is an R11-red corpus, and a hook installed on a
-  red corpus blocks every commit. Refuse to install the hook on any lint error rather
-  than warning about it. See `boxel/adr/0134` for the installed shape.
-- [feature] The toolkit's scripts are **copied** into each repo, so a fix here does not
-  reach them — boxel now carries copies of `lint-docs.mjs` and `build-index.mjs` (its `adr/0134`
-  weighs copy vs symlink vs `file:` dep and takes the copy). `/init-method` needs an
-  `--update` mode that re-copies and reports which repos have drifted; without it the
-  copies rot silently, which is the same class of failure as an uninstalled hook
-  (ADR-0003).
-- [feature] `global/CLAUDE.md` installs by hand today — `ln -s` into `~/.claude/CLAUDE.md`.
-  `/init-method` should do it, and should detect the case where `~/.claude/CLAUDE.md`
-  already exists as a real file (refuse and diff, never clobber). Note the symlink breaks
-  silently if this repo moves: global conventions would vanish with no error, since a
-  missing `~/.claude/CLAUDE.md` is a legal state. A `--check` mode that verifies the link
-  resolves is the cheap guard (ADR-0003).
 - [feature] l33t-mmorpg is not method-migrated: no `adr/` tree, no `LEDGER.md` (it still
   has `ISSUES.md`), no `scripts/`. Its new `CLAUDE.md` therefore omits the taxonomy,
   enforcement and verification sections — stating rules about files that do not exist

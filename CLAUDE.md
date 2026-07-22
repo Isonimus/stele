@@ -32,7 +32,9 @@ most valuable thing this workflow produces, and an in-place edit destroys it.
 
 ## 2. Enforcement — invariants are executable (ADR-0003)
 
-`node scripts/lint-docs.mjs` checks nine rules and runs from a pre-commit hook and CI.
+`node scripts/lint-docs.mjs` checks eleven rules and runs from a pre-commit hook and CI.
+`/init-method` installs both into a target repo (ADR-0006) — and refuses to install the
+hook while the linter is red, because a hook on a red corpus blocks every commit.
 
 A rule enforced by memory is a rule that holds until the first busy afternoon. Five
 supersession defects sat undetected in boxel for weeks because nothing ran. If a
