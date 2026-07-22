@@ -2,7 +2,7 @@
 id: 0001
 title: Every document is either immutable or generated
 type: architecture
-status: accepted
+status: amended
 date: 2026-07-20
 supersedes: []
 superseded_by: []
@@ -74,3 +74,37 @@ true forever, so it cannot go stale.
   geometry, a caveat an in-place edit would have erased.
 - Nothing here is self-enforcing. The rules are only real once a linter checks them and a
   hook runs the linter (ADR-0003).
+
+## Amendment — 2026-07-21: a body may carry a dated correction
+
+The Decision above permits an immutable body exactly two mutations: status and
+supersession, "because 'this decision was later replaced' is itself a historical fact
+about the decision." That reasoning has a wider reach than the rule drawn from it, and two
+observations forced the gap open.
+
+**The incident.** ADR-0003's Decision section reads "`lint-docs.mjs` checks nine rules."
+It now checks ten (rule 10 was added the same day, as an amendment to 0003). The body went
+stale — the precise thing the Consequences section claims an immutable document "cannot"
+do. It can: what actually cannot go stale is the **machine-readable surface**, because no
+tool parses body prose for meaning (ADR-0002). A human reader landing on "nine" is simply
+misinformed.
+
+**The unsanctioned practice.** boxel's ADRs already resolve this, with no ADR permitting
+it: `> Corrected as built (slice 2)…`, `*(Corrected by ADR 0119…)*`. The method's own
+example corpus violates the strict letter of this ADR on a routine basis, which means the
+letter is wrong, not the practice.
+
+**The permitted mutation.** An immutable body may gain a **dated correction marker that
+preserves the original text** — the wrong words stay, the correction sits beside them with
+a date and, where relevant, a pointer to the amendment or ADR that carries the true
+version. What stays forbidden is the **silent in-place rewrite**: replacing the original so
+the record of having been wrong disappears. A correction is a historical fact of exactly
+the kind status and supersession already are — "this line was later found wrong" ranks with
+"this decision was later replaced" — so the same justification that admits those two admits
+this. It is strictly more truthful than the alternatives: editing erases that we were ever
+wrong; leaving it asserts a falsehood as current.
+
+This is deliberately *not* machine-checkable — no linter can tell a preserving correction
+from a destructive edit by reading one version of a file; that distinction lives in the
+diff, which is git's job, not the linter's. The rule is a convention for authors, enforced
+by review, and it is why the body stays outside the linter's reach in the first place.

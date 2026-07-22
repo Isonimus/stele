@@ -9,7 +9,7 @@
 
 | id | title | status |
 | --- | --- | --- |
-| 0001 | Every document is either immutable or generated | accepted |
+| 0001 | Every document is either immutable or generated | amended |
 | 0002 | ADR frontmatter schema | accepted |
 | 0003 | Invariants are enforced by a hook, not by memory | amended |
 | 0004 | Verification harness and in-repo standing invariants | accepted |

@@ -42,6 +42,10 @@ holds until the first busy afternoon.
 Invariants are executable. `scripts/lint-docs.mjs` checks nine rules, each traceable to
 an observed failure:
 
+> **Corrected 2026-07-21.** Ten rules, not nine — rule 10 was added the same day; see the
+> amendment below. This marker, rather than an edit to the line above, is the correction
+> convention sanctioned by ADR-0001's 2026-07-21 amendment.
+
 | # | Rule | Severity |
 |---|---|---|
 | 1 | Frontmatter present, parseable, required fields non-empty | error |

@@ -32,10 +32,18 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   scaffolded repo can still run `npm run lint` before its first ADR. Reasoning recorded in
   the 2026-07-21 amendment to ADR-0003, which moves to `status: amended`. Fixtures
   `r10-wrong-root` and `r10-empty-corpus` pin both branches.
-- [bug] **The `codes()` helper in `test/lint.test.mjs` read rule numbers as `slice(0, 2)`,**
-  so `R10` was indistinguishable from `R1` and rule 10's tests would have passed against
-  rule 1's findings. Fixed to `match(/^R\d+/)` while adding rule 10 — logged because it is
-  a latent trap for every rule past nine, not because it is still open. [done 2026-07-21]
+- [done 2026-07-21] **An immutable body could go stale with no sanctioned way to correct it.**
+  ADR-0003's Decision said "checks nine rules" after rule 10 landed; ADR-0001 forbade
+  editing the body yet claimed an immutable doc "cannot go stale," and boxel's ADRs already
+  broke that rule routinely (`Corrected as built`, `Corrected by ADR NNNN`). Resolved by
+  amending ADR-0001 to permit a **dated correction marker that preserves the original
+  text** — sanctioning the practice boxel already had — and applying one at 0003's stale
+  line. Silent in-place rewrites stay forbidden; the preserving-vs-destructive distinction
+  lives in the diff, not the linter, which is why bodies stay outside the linter's reach.
+- [done 2026-07-21] **The `codes()` helper in `test/lint.test.mjs` read rule numbers as
+  `slice(0, 2)`,** so `R10` was indistinguishable from `R1` and rule 10's tests would have
+  passed against rule 1's findings. Fixed to `match(/^R\d+/)` (commit f6d709d) — logged
+  because it is a latent trap for every rule past nine, not because it was still open.
 - [deferred] Rule 9 (bare `ADR NNNN` prose references) ships as a warning, not an error —
   567 legacy references exist in boxel and some point at external context. Revisit
   promoting it to an error once the corpus is migrated and the true failure rate is
