@@ -13,6 +13,18 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
 
 ## Open
 
+- [feature] `/init-method` installs the enforcement half of the method but not the
+  authoring half: `/adr`, `/slice`, `/wrap-up`, `/audit` and `/remember` live only in this
+  repo's `.claude/commands/`, and there is no `~/.claude/commands/`, so a session rooted
+  at an installed repo cannot resolve any of them. boxel (fully installed 2026-07-22) is
+  in exactly that state — its rules are enforced, its authoring tools absent.
+  **Decision taken 2026-07-22: vendor them**, like the scripts, rather than symlinking a
+  single copy into `~/.claude/commands/`. A user-level symlink would install the toolkit's
+  commands into every repo on the machine, including ones that have never been migrated,
+  where `/wrap-up` would run a linter the repo does not have. Add `.claude/commands/*.md`
+  to the vendored set, extend `--check` to report drift on them, and note that a repo may
+  edit its own copy — the drift report is then informational, which is a difference from
+  the scripts worth stating in the command's prose (ADR-0006).
 - [feature] l33t-mmorpg is not method-migrated: no `adr/` tree, no `LEDGER.md` (it still
   has `ISSUES.md`), no `scripts/`. Its new `CLAUDE.md` therefore omits the taxonomy,
   enforcement and verification sections — stating rules about files that do not exist
