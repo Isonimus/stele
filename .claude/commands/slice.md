@@ -29,13 +29,31 @@ Steps:
 
 3. Body sections, written before you code:
    - `## Goal` — what ships and why, in one paragraph.
+   - `## Definition of Done` — **required.** The acceptance criteria as one or more
+     **Given / When / Then** scenarios, written before you code (ADR-0011). This is the
+     grammar, not a toolchain: plain markdown steps, no Cucumber. State the observable
+     outcome — a criterion with no observable "Then" is not done-able. Each scenario's
+     proof is named below in `## Verification`; a scenario with no proof is an unmet
+     criterion, not a finished one. Example:
+
+     ```
+     ## Definition of Done
+
+     - **Given** a fresh world
+     - **When** the player places the block
+     - **Then** it renders with its mesher shape, a hotbar icon, and a hand-held model
+     ```
+
    - `## Design` — the approach; cite measured numbers from a probe where a design
      question has a measurable answer, not estimates.
    - `## Verification` — **required.** Name the unit tests, and if the behaviour cannot be
      asserted in a unit test (rendering, worldgen, physics, timing), name the
      `scripts/<slice>-verify.mjs` script and confirm it is wired into `package.json`
-     (ADR-0004). A slice with no `## Verification` section is incomplete.
-   - `## As built` — filled in at merge: what actually shipped, in past tense. This is the
+     (ADR-0004). A slice with no `## Verification` section is incomplete. The linter
+     enforces both required sections (R12/R13): a `type: slice` must carry `## Verification`
+     and a `## Definition of Done` holding at least one full Given/When/Then triad.
+   - `## As built` — filled in at merge: what actually shipped, in past tense, confirming
+     each Definition-of-Done scenario was met or recording the deviation. This is the
      freeze step.
 4. Regenerate the index and run the linter; both green before done.
 

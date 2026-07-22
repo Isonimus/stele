@@ -126,6 +126,41 @@ test('R11 stays silent where there is no harness to wire', () => {
   assert.ok(!errors('r5-dangling').includes('R11'));
 });
 
+test('a complete slice — both sections, a real triad — produces no findings', () => {
+  // The happy path: proves R12/R13 do not fire on a slice that honours the contract.
+  assert.deepEqual(errors('slice-complete'), []);
+  assert.deepEqual(warnings('slice-complete'), []);
+});
+
+test('R12 errors when a current slice omits its ## Verification section', () => {
+  // ADR-0004 required the section from the start but nothing checked it — the same gap
+  // R11 closed for wiring. Dated on/after the rule, the omission is an error.
+  assert.deepEqual(errors('r12-slice-no-verification'), ['R12']);
+});
+
+test('R13 errors when a current slice omits its ## Definition of Done section', () => {
+  assert.deepEqual(errors('r13-slice-no-dod'), ['R13']);
+});
+
+test('R13 errors when the Definition of Done is prose, not a Given/When/Then triad', () => {
+  // Presence of the header is not enough: the section must hold a real scenario. Shape,
+  // not truth — the check reads that the three step kinds exist, never what they claim.
+  assert.deepEqual(errors('r13-slice-no-triad'), ['R13']);
+});
+
+test('R12/R13 only warn on a legacy slice dated before the rule', () => {
+  // boxel's ~104 slices and gamatar's predate the rule; erroring would turn every repo
+  // red on the day it adopts this linter. The date split warns on legacy, errors on new.
+  assert.deepEqual(errors('slice-legacy'), []);
+  assert.deepEqual(warnings('slice-legacy'), ['R12', 'R13']);
+});
+
+test('R12/R13 never fire on a non-slice document', () => {
+  // The rules key off type: slice. An architecture ADR has no Verification/DoD contract.
+  assert.ok(!errors('clean').includes('R12'));
+  assert.ok(!errors('clean').includes('R13'));
+});
+
 // --- frontmatter parser -----------------------------------------------------
 
 test('parser reads inline lists, block lists, and empty values', () => {

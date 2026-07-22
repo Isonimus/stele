@@ -25,11 +25,6 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   as boxel: nothing renders an avatar headlessly and leaves an artifact to look at. Its
   `scripts/` now exists (the vendored linter landed there 2026-07-22), so this is the
   script itself, not the scaffolding (ADR-0004).
-- [feature] Lint rule: every `type: slice` ADR must contain a `## Verification` section.
-  ADR-0004 requires it but nothing checks it; it is cheap and machine-checkable, unlike the
-  §5 invariants the ADR admits cannot be linted. Must be **warning-only on legacy** like
-  rule 9 — boxel's ~104 existing slices predate the rule and would otherwise go red
-  (ADR-0004).
 - [feature] `/init-method` needs a survey step to supply the architectural `type:` set.
   `migrate-adrs.mjs` now takes it as `--arch=id,id,...` (default: boxel's 22-id survey),
   proven on gamatar's all-architecture corpus — but a fresh repo still has no set, so init

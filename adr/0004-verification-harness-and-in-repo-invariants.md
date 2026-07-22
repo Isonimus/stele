@@ -132,3 +132,26 @@ three invariants do not yet justify — if a structured invariant manifest ever 
 place, that is its own ADR. The limit is stated rather than papered over, the discipline §2
 already holds this project to. The template's §4 gains the column so the convention has an
 exemplar, and §3 records that wiring is now rule-checked.
+
+## Amendment — 2026-07-23: the Verification section becomes rule 12
+
+The Decision requires every slice to name its proof in a `## Verification` section — "A
+slice with no `## Verification` section is incomplete," as the `/slice` command puts it. As
+with the wiring requirement before rule 11, nothing checked it: a slice could ship with the
+section absent and the linter said nothing. The requirement was enforced only by the prose
+that stated it — the exact recurrence rule 11's amendment named.
+
+**Rule 12 closes it**, alongside rule 13 from ADR-0011, which adds the sibling
+`## Definition of Done` requirement. The two are one piece of work: both assert a required
+slice section on `type: slice` documents, so they share a single severity rule and are
+checked together. Severity splits on the slice's own `date` — a slice predating the rules
+(boxel's ~104, gamatar's) only warns, so a repo does not go red on its legacy corpus the
+day it adopts the linter, while a slice dated on or after must comply. A rule that only ever
+warned, as the ledger first sketched this one, would gate legacy in but never enforce the
+section on new work; the date split does both.
+
+Rule 12 reads a markdown heading in the body, the first body prose the linter inspects. That
+does not breach ADR-0002: the machine-readable *schema* stays the frontmatter; a heading's
+presence is structure, not schema, and its *contents* are never read. What rule 12 does not
+do is what rule 11 did not do — it checks the section exists, not that the proof it names is
+real or sufficient. That is the coverage question, and it stays with `/wrap-up`.

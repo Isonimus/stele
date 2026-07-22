@@ -18,6 +18,14 @@ const TYPES = ['architecture', 'slice', 'batch'];
 const REQUIRED = ['id', 'title', 'type', 'status', 'date'];
 const DOC_DIRS = ['adr', 'slices'];
 
+// The date the required-slice-section rules (R12/R13) shipped (ADR-0004, ADR-0011). A
+// slice dated before this predates the rules and only warns; one dated on or after must
+// comply. Without the split, a repo adopting this linter would go red on its whole legacy
+// corpus (boxel's ~104 slices, gamatar's) the day it installs — but a rule that only ever
+// warns never enforces the section on new work either. The date gates legacy in without
+// letting new slices skip the contract.
+const SLICE_SECTIONS_SINCE = '2026-07-22';
+
 // --- frontmatter ------------------------------------------------------------
 
 /** Ids are always 4-digit strings. Normalising early sidesteps YAML's octal reading of
@@ -117,6 +125,43 @@ export function loadDocs(root) {
     }
   }
   return docs;
+}
+
+// --- section helpers --------------------------------------------------------
+// Slice rules (R12/R13) assert the presence and shape of `## Sections` in the body prose.
+// This is the only place the linter reads body text structurally; ADR-0002 keeps
+// frontmatter the machine-readable surface, and a markdown heading is not frontmatter.
+
+/** The text under a `## Heading`, up to the next `#`/`##` heading or end of body.
+ *  Returns null when the heading is absent — distinct from a present-but-empty section. */
+function sectionText(body, name) {
+  const heading = new RegExp(`^##\\s+${name}\\s*$`, 'i');
+  const lines = (body ?? '').split('\n');
+  const start = lines.findIndex((l) => heading.test(l.trim()));
+  if (start === -1) return null;
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex((l) => /^#{1,2}\s/.test(l.trim()));
+  return (end === -1 ? rest : rest.slice(0, end)).join('\n');
+}
+
+/** Which Gherkin step keywords appear as line-leading steps, tolerant of a leading list
+ *  marker and markdown emphasis (`- **Given** …`). Shape only (ADR-0011): it reads that a
+ *  step exists, never what the step claims. */
+function gherkinSteps(text) {
+  const kinds = new Set();
+  for (const raw of text.split('\n')) {
+    const line = raw.trim().replace(/^[-*+>]\s*/, '').replace(/[*_`]/g, '');
+    const m = line.match(/^(?:and\s+|but\s+)?(given|when|then)\b/i);
+    if (m) kinds.add(m[1].toLowerCase());
+  }
+  return kinds;
+}
+
+/** A `## Definition of Done` has a real scenario when all three step kinds are present —
+ *  a complete Given/When/Then triad's worth of steps, in any order. */
+function hasGherkinTriad(text) {
+  const steps = gherkinSteps(text);
+  return steps.has('given') && steps.has('when') && steps.has('then');
 }
 
 // --- rules ------------------------------------------------------------------
@@ -314,6 +359,36 @@ const rules = {
       if (!/-verify\.(mjs|mts)$/.test(file)) continue;
       if (!wired.has(file)) {
         report('error', join(scriptsDir, file), `R11 ${file} is not wired into package.json — it would run never`);
+      }
+    }
+  },
+
+  // R12/R13 — required slice sections. A slice is a feature work-unit (ADR-0001); two
+  // sections complete its contract: `## Verification` names the proof (ADR-0004), and
+  // `## Definition of Done` states the acceptance criteria in Given/When/Then (ADR-0011).
+  // Both requirements predated any check — ADR-0004 named the Verification section but
+  // nothing enforced it, the same gap R11 closed for wiring. They are checked together
+  // because they share one severity rule.
+  //
+  // Severity splits on the slice's own date (SLICE_SECTIONS_SINCE): a slice predating the
+  // rules only warns, so a repo's legacy corpus does not go red on adoption; one dated on
+  // or after must comply, so new work is enforced rather than merely nagged. Presence and
+  // triad-shape are all this checks — whether a scenario is correct or the set complete is
+  // the coverage question, left to `/wrap-up` (ADR-0004, ADR-0011).
+  sliceSections(docs, _root, report) {
+    for (const d of docs) {
+      if (!d.ok || d.data.type !== 'slice') continue;
+      const severity = String(d.data.date ?? '') >= SLICE_SECTIONS_SINCE ? 'error' : 'warn';
+
+      if (sectionText(d.body, 'Verification') === null) {
+        report(severity, d.path, `R12 type: slice has no "## Verification" section (ADR-0004)`);
+      }
+
+      const dod = sectionText(d.body, 'Definition of Done');
+      if (dod === null) {
+        report(severity, d.path, `R13 type: slice has no "## Definition of Done" section (ADR-0011)`);
+      } else if (!hasGherkinTriad(dod)) {
+        report(severity, d.path, `R13 "## Definition of Done" has no Given/When/Then scenario (ADR-0011)`);
       }
     }
   },

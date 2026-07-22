@@ -74,6 +74,13 @@ not wired runs exactly once, on the day it was written, and is dead thereafter â
 documents that the slice worked once, which is not what a regression check is for. Probes
 are exempt: a probe answers its question once and the number lands in an ADR.
 
+Every slice carries two required sections, both rule-checked: `## Verification` names the
+proof (R12), and `## Definition of Done` states the acceptance criteria as Given/When/Then
+scenarios written before the code (R13, ADR-0011). Each scenario names its proof in
+`## Verification`; the linter checks the sections exist and that the Definition of Done
+holds a full triad â€” it cannot check that a scenario is *right*, which is what `/wrap-up`
+is for.
+
 Probes are the same tool used before the fact: when a design question has a measurable
 answer (how many caves per chunk, what the frame cost is), write `scripts/<topic>-probe.mjs`
 and put the **measured numbers** in the ADR. Design decisions cite data, not estimates.
