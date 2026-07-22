@@ -1,6 +1,6 @@
 # Ledger
 
-The single mutable file in this repo (ADR-0001). Everything else is immutable or
+The single mutable file in this repo (ADR-0010). Everything else is immutable or
 generated. Open work, deferrals, and known defects all live here — there is no second
 tracking file, because two files require manual sync and manual sync does not happen.
 
@@ -25,18 +25,6 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   as boxel: nothing renders an avatar headlessly and leaves an artifact to look at. Its
   `scripts/` now exists (the vendored linter landed there 2026-07-22), so this is the
   script itself, not the scaffolding (ADR-0004).
-- [audit] Reference/technique knowledge has no home in the immutable/generated/mutable
-  taxonomy. boxel's `mc-texture-color-source` (how to fetch real MC textures and compute
-  authoritative colors) is neither a decision, a worklist item, nor a codebase invariant.
-  Candidate resolution: treat such docs as **live docs under the README precedent** (a
-  `docs/` tree, updated in the same change as the code they describe) rather than a new
-  mutable governance kind — and split the *decision* ("derive colors from real textures")
-  into an ADR from the *procedure*. This amends the governing taxonomy, so it is an
-  ADR-0001 amendment/supersession, not a filing tweak (ADR-0001). **The candidate has
-  now been tried in the field**: boxel's `docs/harness-notes.md` (2026-07-22) is exactly
-  such a live doc — the verification rig's operating mechanics, harvested out of assistant
-  memory, cited from its `CLAUDE.md` §3 and governed by nothing else. Decide the taxonomy
-  question on that evidence rather than in the abstract.
 - [feature] Lint rule: every `type: slice` ADR must contain a `## Verification` section.
   ADR-0004 requires it but nothing checks it; it is cheap and machine-checkable, unlike the
   §5 invariants the ADR admits cannot be linted. Must be **warning-only on legacy** like
