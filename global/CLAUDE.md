@@ -51,14 +51,40 @@ For anything non-trivial, **present the options and their tradeoffs before build
 ## 3. Quality bar
 
 - **Never use `any`.** No exceptions. `unknown` + narrowing, generics, or proper types.
-- **Every relevant piece of logic gets a regression test.** No excuses — and no
-  irrelevant, duplicate, or fragile tests either. Tests are codebase: same standards,
-  same strict typing.
+- **Fail loud.** No swallowed errors — no empty `catch`, no catch-log-and-continue past a
+  broken invariant, no default or fallback that masks a real failure. Validate at
+  boundaries and stop at the first sign something is wrong. A silenced error is a bug
+  debugged twice: once now, blind, and once later for real.
+- **Lean, purposeful code — KISS.** The simplest thing that works; complexity must earn
+  its place, and unexplained complexity is a defect. No speculative generality, no
+  abstraction without a present need. Fight cyclomatic complexity by extracting
+  composable, well-named functions **for readability and reuse — never to hit a number**;
+  decomposition that adds indirection without adding clarity is its own smell.
+- **Cohesion and DRY, by the rule of three.** Modules stay cohesive; a piece of logic
+  lives in one place. Reach for reuse or composition on the **third** instance of the same
+  logic — not the first, which is the speculative generality forbidden above. Apply SOLID
+  only where it earns its keep; misapplied, it produces exactly the over-abstraction this
+  bar exists to prevent.
+- **Names are accurate descriptors.** No `x`, `tmp`, `data2`, `handle2`. A name states the
+  thing's intent and its meaning in the domain; when a good name is hard to find, the
+  design is usually the problem, not the vocabulary.
+- **No magic values.** A bare `86400` or `0.15` in a branch is a latent bug — name it as a
+  constant whose name explains what it is and why.
+- **Comments explain WHY, not WHAT** — the code already shows what. No commented-out code
+  and no unused exports left behind; dead code is deleted, not parked (version control
+  remembers it).
+- **Every relevant piece of logic gets a regression test — a good one.** No excuses, and
+  no irrelevant, duplicate, or fragile tests either. A regression test must **fail before
+  the fix and pass after** — one that passes before proves nothing. Test observable
+  behaviour, not implementation internals, and cover the error and edge paths, not just
+  the happy one. Tests are codebase: same standards, same strict typing.
 - **No hacks, no quick fixes, no workarounds.** Find the root cause and fix it for good.
   A symptom silenced is a bug rescheduled.
 - **Boyscout rule:** leave every touched file better than found. A noticed bug is ours
   even if we didn't introduce it — fix it, or log it in the repo's ledger if deferred.
-- Lean, purposeful code. No unnecessary abstraction, no speculative generality.
+- **Verify before declaring done.** Never report a task complete without running the
+  repo's own checks — typecheck, linter, tests. "Done" means the checks ran and passed in
+  this conversation, and I said what ran — not that the change looks right.
 - **Never hardcode absolute paths** in config files, scripts, or commands — always
   relative.
 
