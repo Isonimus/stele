@@ -14,6 +14,19 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
 ## Open
 
 - [feature] `/init-method` bootstrap so the kit installs into any git repo (ADR-0003).
+  **boxel has now run the whole flow by hand** (2026-07-22) and is the spec: scaffold
+  `CLAUDE.md` + `LEDGER.md`, wire every `scripts/*-verify.mjs` into `package.json`,
+  confirm `lint-docs.mjs` green **against the repo root**, generate `adr/INDEX.md`, and
+  only then symlink `.claude/hooks/pre-commit` into `.git/hooks/`. The order is
+  load-bearing: an unwired verify script is an R11-red corpus, and a hook installed on a
+  red corpus blocks every commit. Refuse to install the hook on any lint error rather
+  than warning about it. See `boxel/adr/0134` for the installed shape.
+- [feature] The toolkit's scripts are **copied** into each repo, so a fix here does not
+  reach them — boxel now carries copies of `lint-docs.mjs` and `build-index.mjs` (its `adr/0134`
+  weighs copy vs symlink vs `file:` dep and takes the copy). `/init-method` needs an
+  `--update` mode that re-copies and reports which repos have drifted; without it the
+  copies rot silently, which is the same class of failure as an uninstalled hook
+  (ADR-0003).
 - [feature] `global/CLAUDE.md` installs by hand today — `ln -s` into `~/.claude/CLAUDE.md`.
   `/init-method` should do it, and should detect the case where `~/.claude/CLAUDE.md`
   already exists as a real file (refuse and diff, never clobber). Note the symlink breaks
@@ -29,36 +42,14 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   promoting it to an error once the corpus is migrated and the true failure rate is
   known (ADR-0003). Note rule 9 cannot distinguish a typo from a deliberate reference to
   *another repo's* ADR — this repo's own ADRs trip it six times citing boxel and gamatar
-  ids. Promoting it to an error needs a way to mark cross-repo citations first.
+  ids. Promoting it to an error needs a way to mark cross-repo citations first. **Rule 8 has the
+  same gap and is already an error**: a ledger line citing another repo's decision fails,
+  so such citations must be written as paths (`boxel/adr/0134`) until the marking exists.
 - [deferred] `slices/` directory and the ADR/slice split apply to **new** documents only.
   boxel's existing 130 keep `type:` in frontmatter instead — a physical split would
   rewrite 567 cross-references for no additional query power (ADR-0002).
-- [feature] **boxel has no `CLAUDE.md` at all** — a prerequisite for both memory-rehoming
-  items below, which say "into its `CLAUDE.md` §5" as though the file existed. Scaffold it
-  from `templates/CLAUDE.md`, whose invariants table is now §4 — the rehoming items below
-  still say §5, from before the template dropped its duplicated global sections
-  (ADR-0004).
-- [feature] Migrate boxel's `mob-egg-rule` and `block-detail-default` out of assistant
-  memory into its `CLAUDE.md` §5 invariants table, keeping the GLASS exception and its
-  reason. Was scoped to Phase 3, which shipped gamatar-only; blocked on the missing
-  `CLAUDE.md` above (ADR-0004).
-- [feature] Wire boxel's eleven unwired `scripts/*-verify.mjs` into `package.json` and run
-  their console-error half in CI. They currently run never (ADR-0004).
 - [feature] gamatar has no verification harness at all despite the same untestable-render
   problem. Seed `scripts/` and a first verify script for the renderer (ADR-0004).
-- [feature] **The pre-commit hook must not be installed on a repo whose corpus is linter-
-  red.** boxel was red on the three 0112/0113/0114→0122 pairs until they were hand-fixed;
-  a hook installed before that would have blocked every commit. Order for any repo:
-  (1) land the migration as one atomic commit, (2) hand-fix the red supersession pairs,
-  (3) only then install the hook. Record this ordering in `/init-method` (ADR-0003).
-- [feature] Rehome the *remaining* boxel memory files — ADR-0004 moved only `mob-egg-rule`
-  and `block-detail-default`. `boxel-no-backcompat-policy` → §5 invariant;
-  `chase-mc-fidelity` → §3 quality-bar ethos; `commit-message-style` → §6 (the template
-  covers trailers but not the evocative single-line style); `boxel-project-state` NEXT list
-  → ledger `[feature]` items. **Delete** `backlog-closure-convention` (ADR-0001 obsoletes
-  the dual-write rule) and `boxel-project-state`'s milestone log (a hand-maintained
-  changelog is the anti-pattern). Keep `iker-git-identity` and the easter eggs in memory —
-  operator/personal, per ADR-0004's split (ADR-0004).
 - [audit] Reference/technique knowledge has no home in the immutable/generated/mutable
   taxonomy. boxel's `mc-texture-color-source` (how to fetch real MC textures and compute
   authoritative colors) is neither a decision, a worklist item, nor a codebase invariant.
@@ -66,7 +57,11 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   `docs/` tree, updated in the same change as the code they describe) rather than a new
   mutable governance kind — and split the *decision* ("derive colors from real textures")
   into an ADR from the *procedure*. This amends the governing taxonomy, so it is an
-  ADR-0001 amendment/supersession, not a filing tweak (ADR-0001).
+  ADR-0001 amendment/supersession, not a filing tweak (ADR-0001). **The candidate has
+  now been tried in the field**: boxel's `docs/harness-notes.md` (2026-07-22) is exactly
+  such a live doc — the verification rig's operating mechanics, harvested out of assistant
+  memory, cited from its `CLAUDE.md` §3 and governed by nothing else. Decide the taxonomy
+  question on that evidence rather than in the abstract.
 - [feature] Lint rule: every `type: slice` ADR must contain a `## Verification` section.
   ADR-0004 requires it but nothing checks it; it is cheap and machine-checkable, unlike the
   §5 invariants the ADR admits cannot be linted. Must be **warning-only on legacy** like
