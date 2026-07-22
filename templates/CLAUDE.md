@@ -67,9 +67,11 @@ behaviour the slice claims, and:
   linked;
 - **is wired into `package.json`**, and its error-check half runs in CI.
 
-That last point is the one that gets skipped. A verify script that is not in
-`package.json` runs exactly once, on the day it was written, and is dead thereafter —
-it documents that the slice worked once, which is not what a regression check is for.
+That last point is the one that gets skipped, so it is **rule-checked** (R11): the linter
+fails if any `scripts/*-verify.mjs` is absent from `package.json`. A verify script that is
+not wired runs exactly once, on the day it was written, and is dead thereafter — it
+documents that the slice worked once, which is not what a regression check is for. Probes
+are exempt: a probe answers its question once and the number lands in an ADR.
 
 Probes are the same tool used before the fact: when a design question has a measurable
 answer (how many caves per chunk, what the frame cost is), write `scripts/<topic>-probe.mjs`
@@ -85,9 +87,20 @@ These live **here, in the repo** — not in assistant memory. A rule that govern
 codebase must be greppable, diffable, reviewable, and survive a change of machine
 (ADR-0005).
 
-| # | Invariant | Source |
-|---|---|---|
-| 1 | _(none yet — add as they are decided)_ | |
+Each row declares how it is **enforced**, so an aspiration is never mistaken for a
+guarantee:
+
+- `verified_by: <script>` — a wired verify script or lint rule checks it;
+- `pending (LEDGER)` — enforceable but not yet enforced; a ledger item carries the debt;
+- `review-only` — enforceable only by human judgement, so `/wrap-up` is the enforcement.
+
+The declaration is a convention checked at review, not by the linter — the linter does not
+read this file (ADR-0004). What it *does* enforce is that every `verified_by` script is
+actually wired (R11), so a row cannot claim a check that runs nowhere.
+
+| # | Invariant | Source | Enforced by |
+|---|---|---|---|
+| 1 | _(none yet — add as they are decided)_ | | |
 
 When an ADR's consequences create a rule that all *future* work must follow, add the row
 in the same commit as the ADR.

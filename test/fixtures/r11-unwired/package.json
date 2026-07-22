@@ -1,0 +1,7 @@
+{
+  "name": "r11-unwired-fixture",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  }
+}

@@ -106,6 +106,26 @@ test('R10 stays silent whenever any document is found', () => {
   assert.ok(!errors('r5-dangling').includes('R10'));
 });
 
+test('R11 flags a verify script no package.json command runs', () => {
+  // The load-bearing wiring requirement of ADR-0004, now enforced. The same fixture
+  // carries an unwired *-probe.mjs, so a lone R11 also proves probes are exempt.
+  assert.deepEqual(errors('r11-unwired'), ['R11']);
+});
+
+test('R11 accepts scripts wired through a single aggregate runner', () => {
+  // `node scripts/a-verify.mjs && node scripts/b-verify.mjs` wires both — the reason
+  // wiring is matched per-token by basename rather than by a substring scan.
+  assert.deepEqual(errors('r11-wired'), []);
+  assert.deepEqual(warnings('r11-wired'), []);
+});
+
+test('R11 stays silent where there is no harness to wire', () => {
+  // No scripts/ or package.json (every document-rule fixture, and clean) means nothing
+  // to check — R11 must not invent a finding.
+  assert.ok(!errors('clean').includes('R11'));
+  assert.ok(!errors('r5-dangling').includes('R11'));
+});
+
 // --- frontmatter parser -----------------------------------------------------
 
 test('parser reads inline lists, block lists, and empty values', () => {

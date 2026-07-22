@@ -1,0 +1,7 @@
+{
+  "name": "r11-wired-fixture",
+  "private": true,
+  "scripts": {
+    "verify": "node scripts/a-verify.mjs && node scripts/b-verify.mjs"
+  }
+}

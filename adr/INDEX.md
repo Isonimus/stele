@@ -12,7 +12,7 @@
 | 0001 | Every document is either immutable or generated | amended |
 | 0002 | ADR frontmatter schema | accepted |
 | 0003 | Invariants are enforced by a hook, not by memory | amended |
-| 0004 | Verification harness and in-repo standing invariants | accepted |
+| 0004 | Verification harness and in-repo standing invariants | amended |
 | 0005 | Write routing and the bounds of assistant memory | accepted |
 
 ## Slices

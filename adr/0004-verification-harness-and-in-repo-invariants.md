@@ -2,7 +2,7 @@
 id: 0004
 title: Verification harness and in-repo standing invariants
 type: architecture
-status: accepted
+status: amended
 date: 2026-07-20
 supersedes: []
 superseded_by: []
@@ -85,3 +85,50 @@ rules about how a codebase must behave.
   over. `/wrap-up` surfaces the table for a read-through instead.
 - Migrating boxel's memory files into its `CLAUDE.md` is recorded in `LEDGER.md` and lands
   with the Phase 3 migration.
+
+## Amendment — 2026-07-22: wiring becomes rule 11; invariants declare enforcement
+
+The Decision above makes two requirements that nothing checks, and the gap is the same one
+this ADR exists to close — now visible in the ADR about closing it.
+
+**The wiring requirement was never enforced.** The Decision calls `package.json` wiring
+"the load-bearing half," and the Consequences call an unwired verify script one that
+"documents that a slice worked once, which is not what a regression check is for." Yet
+Finding 2 — eleven of twelve scripts unwired — was true when this ADR was accepted and
+stayed true, because no rule looked. A requirement enforced only by the prose that states
+it is precisely the failure ADR-0003 exists to fix, recurring in the ADR about the harness.
+
+**Rule 11 closes it.** `lint-docs.mjs` now asserts that every `scripts/*-verify.{mjs,mts}`
+is referenced by some `package.json` script. It reads `scripts/` and `package.json`, never
+`CLAUDE.md`, so no body prose enters the machine-readable surface (ADR-0002 stands). Probes
+are excluded by name: a probe answers a design question once and the ADR cites the number,
+so it is not a standing regression and is not required to be wired. This is the first
+*harness* rule — R1–R10 are the *document* rules ADR-0003 owns; each ADR owns the rules its
+own findings motivate.
+
+**What rule 11 deliberately does not do.** It checks that a verify script is wired, not
+that it verifies anything true, and not that every §4 invariant has a script at all.
+Whether code actually satisfies "every block ships its icon" cannot be decided by reading
+one version of a file — that is the *coverage* question, and it stays where the
+Consequences already put it: unlinted, surfaced by `/wrap-up` for human read-through. Rule
+11 enforces that the checks we *have* run; it cannot enforce that the checks we *need*
+exist. Claiming otherwise would be the false-green rule 10 was added to kill.
+
+**Invariants declare their enforcement.** Between "wired and checked" and "cannot be
+checked at all" sits a third state that Finding 3's rules — and boxel's block-completeness
+rule, the incident that prompted this amendment — all occupy: recorded, real, but not yet
+enforced. A §4 row in that state is indistinguishable from an enforced one, so a reader
+takes an aspiration for a guarantee. Each §4 invariant now declares its enforcement in a
+new column:
+
+- `verified_by: <script>` — a wired verify script (or lint rule) checks it;
+- `pending (LEDGER)` — enforceable, not yet enforced; a ledger item carries the debt;
+- `review-only` — enforceable only by human judgement (the GLASS-veto aesthetic call no
+  script can make), so `/wrap-up` is the enforcement, by design.
+
+This last part is a **convention, enforced by review, not by the linter**. Linting it would
+mean parsing §4 prose, which ADR-0002 keeps off the machine-readable surface and which
+three invariants do not yet justify — if a structured invariant manifest ever earns its
+place, that is its own ADR. The limit is stated rather than papered over, the discipline §2
+already holds this project to. The template's §4 gains the column so the convention has an
+exemplar, and §3 records that wiring is now rule-checked.

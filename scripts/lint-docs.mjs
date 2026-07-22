@@ -266,6 +266,45 @@ const rules = {
     });
   },
 
+  // R11 — every verify script is wired into package.json (ADR-0004). The harness's
+  // load-bearing half: an unwired `*-verify.mjs` ran once on the day it was written and
+  // never again — ADR-0004 Finding 2 found eleven of twelve boxel scripts in exactly that
+  // state. This is the first *harness* rule; R1–R9 (and R10) check documents. It reads
+  // scripts/ and package.json, never CLAUDE.md, so no prose enters the checked surface.
+  //
+  // Probes are excluded by name: a probe answers a design question once and its number
+  // goes in an ADR, so it is not a standing regression and is not required to be wired.
+  harnessWiring(_docs, root, report) {
+    const scriptsDir = join(root, 'scripts');
+    const pkgPath = join(root, 'package.json');
+    if (!existsSync(scriptsDir) || !existsSync(pkgPath)) return;
+
+    let pkg;
+    try {
+      pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    } catch (err) {
+      report('error', pkgPath, `R11 package.json is not valid JSON: ${err.message}`);
+      return;
+    }
+
+    // A script is wired if its filename is the basename of a token in any npm command.
+    // Tokenising and comparing basenames — rather than a substring test — is what keeps
+    // `a-verify.mjs` from matching a runner that only mentions `xa-verify.mjs`, and lets
+    // one aggregate command (`node scripts/a.mjs && node scripts/b.mjs`) wire both.
+    const wired = new Set(
+      Object.values(pkg.scripts ?? {})
+        .flatMap((cmd) => String(cmd).split(/[\s'"]+/))
+        .map((tok) => basename(tok)),
+    );
+
+    for (const file of readdirSync(scriptsDir).sort()) {
+      if (!/-verify\.(mjs|mts)$/.test(file)) continue;
+      if (!wired.has(file)) {
+        report('error', join(scriptsDir, file), `R11 ${file} is not wired into package.json — it would run never`);
+      }
+    }
+  },
+
   // R9 — prose cross-references. Warning only, deliberately: boxel carries 567 bare
   // references, some pointing at external or historical context. Failing the build on
   // those would make the linter something to disable rather than obey.
