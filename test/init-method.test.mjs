@@ -4,9 +4,6 @@
 // trees, because the behaviours under test are *filesystem states* — a symlink, a
 // missing hook, a drifted copy — which a checked-in fixture cannot carry faithfully
 // (git stores no broken symlink targets and no .git/hooks).
-//
-// `home` is always injected. A test that let the script find the operator's real
-// ~/.claude/CLAUDE.md would either clobber it or pass only on one machine.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -37,39 +34,36 @@ superseded_by: []
 ## Consequences
 `;
 
-/** A git repo with one valid ADR, plus an injected empty home. Removed on exit. */
+/** A git repo with one valid ADR. Removed on exit. */
 function scratchRepo({ withAdr = true } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'init-method-'));
   const target = join(root, 'repo');
-  const home = join(root, 'home');
   mkdirSync(target, { recursive: true });
-  mkdirSync(home, { recursive: true });
   execFileSync('git', ['init', '--quiet'], { cwd: target });
   if (withAdr) {
     mkdirSync(join(target, 'adr'), { recursive: true });
     writeFileSync(join(target, 'adr', '0001-a-first-decision.md'), ADR);
   }
   process.on('exit', () => rmSync(root, { recursive: true, force: true }));
-  return { root, target, home };
+  return { root, target };
 }
 
 const run = (opts) => initMethod({ toolkit: TOOLKIT, ...opts });
 const statuses = (actions, path) => actions.filter((a) => a.path.endsWith(path)).map((a) => a.status);
 
 test('a dry run writes nothing at all', () => {
-  const { target, home } = scratchRepo();
-  const { actions } = run({ target, home });
+  const { target } = scratchRepo();
+  const { actions } = run({ target });
 
   assert.ok(actions.some((a) => a.status === 'would'));
   assert.equal(existsSync(join(target, 'CLAUDE.md')), false);
   assert.equal(existsSync(join(target, 'scripts', 'lint-docs.mjs')), false);
   assert.equal(existsSync(join(target, '.git', 'hooks', 'pre-commit')), false);
-  assert.equal(existsSync(join(home, '.claude', 'CLAUDE.md')), false);
 });
 
-test('--apply scaffolds, vendors, indexes, hooks and links the global conventions', () => {
-  const { target, home } = scratchRepo();
-  const { problems } = run({ target, home, apply: true });
+test('--apply scaffolds, vendors, indexes, and hooks', () => {
+  const { target } = scratchRepo();
+  const { problems } = run({ target, apply: true });
 
   assert.equal(problems, 0);
   assert.ok(existsSync(join(target, 'CLAUDE.md')));
@@ -81,18 +75,15 @@ test('--apply scaffolds, vendors, indexes, hooks and links the global convention
   assert.ok(lstatSync(hook).isSymbolicLink());
   assert.equal(readlinkSync(hook), '../../.claude/hooks/pre-commit');
   assert.ok(existsSync(hook), 'the hook symlink must resolve, not merely exist');
-
-  const global = join(home, '.claude', 'CLAUDE.md');
-  assert.equal(readlinkSync(global), join(TOOLKIT, 'global', 'CLAUDE.md'));
 });
 
 test('an unwired verify script blocks the hook but not the rest of the install', () => {
-  const { target, home } = scratchRepo();
+  const { target } = scratchRepo();
   mkdirSync(join(target, 'scripts'), { recursive: true });
   writeFileSync(join(target, 'scripts', 'thing-verify.mjs'), '// never wired\n');
   writeFileSync(join(target, 'package.json'), JSON.stringify({ name: 'x', scripts: {} }));
 
-  const { actions, problems } = run({ target, home, apply: true });
+  const { actions, problems } = run({ target,apply: true });
 
   assert.ok(problems > 0);
   assert.ok(actions.some((a) => a.status === 'problem' && /REFUSING to install the pre-commit hook/.test(a.message)));
@@ -103,63 +94,40 @@ test('an unwired verify script blocks the hook but not the rest of the install',
 });
 
 test('wiring the script and re-running installs the hook', () => {
-  const { target, home } = scratchRepo();
+  const { target } = scratchRepo();
   mkdirSync(join(target, 'scripts'), { recursive: true });
   writeFileSync(join(target, 'scripts', 'thing-verify.mjs'), '// wired below\n');
   writeFileSync(join(target, 'package.json'), JSON.stringify({ name: 'x', scripts: {} }));
-  run({ target, home, apply: true });
+  run({ target,apply: true });
 
   writeFileSync(join(target, 'package.json'), JSON.stringify({
     name: 'x',
     scripts: { 'verify:thing': 'node scripts/thing-verify.mjs' },
   }));
-  const { problems } = run({ target, home, apply: true });
+  const { problems } = run({ target,apply: true });
 
   assert.equal(problems, 0);
   assert.ok(existsSync(join(target, '.git', 'hooks', 'pre-commit')));
 });
 
 test('an existing CLAUDE.md is kept, never overwritten', () => {
-  const { target, home } = scratchRepo();
+  const { target } = scratchRepo();
   writeFileSync(join(target, 'CLAUDE.md'), '# Ours, hand-written\n');
 
-  const { actions } = run({ target, home, apply: true });
+  const { actions } = run({ target,apply: true });
 
   assert.deepEqual(statuses(actions, 'CLAUDE.md').slice(0, 1), ['keep']);
   assert.equal(readFileSync(join(target, 'CLAUDE.md'), 'utf8'), '# Ours, hand-written\n');
 });
 
-test('a real ~/.claude/CLAUDE.md is refused and left alone', () => {
-  const { target, home } = scratchRepo();
-  mkdirSync(join(home, '.claude'), { recursive: true });
-  writeFileSync(join(home, '.claude', 'CLAUDE.md'), '# my own conventions\n');
-
-  const { actions, problems } = run({ target, home, apply: true });
-
-  assert.ok(problems > 0);
-  assert.ok(actions.some((a) => a.status === 'problem' && /refusing to overwrite/.test(a.message)));
-  assert.equal(readFileSync(join(home, '.claude', 'CLAUDE.md'), 'utf8'), '# my own conventions\n');
-});
-
-test('a broken global symlink is reported, because absent is legal and silent', () => {
-  const { target, home } = scratchRepo();
-  mkdirSync(join(home, '.claude'), { recursive: true });
-  execFileSync('ln', ['-s', join(home, 'gone', 'CLAUDE.md'), join(home, '.claude', 'CLAUDE.md')]);
-
-  const { actions, problems } = run({ target, home, mode: 'check' });
-
-  assert.ok(problems > 0);
-  assert.ok(actions.some((a) => a.status === 'problem' && /silently absent/.test(a.message)));
-});
-
 test('--check fails on a removed hook and on a drifted copy', () => {
-  const { target, home } = scratchRepo();
-  run({ target, home, apply: true });
-  assert.equal(run({ target, home, mode: 'check' }).problems, 0);
+  const { target } = scratchRepo();
+  run({ target,apply: true });
+  assert.equal(run({ target,mode: 'check' }).problems, 0);
 
   rmSync(join(target, '.git', 'hooks', 'pre-commit'));
   appendFileSync(join(target, 'scripts', 'lint-docs.mjs'), '\n// local edit\n');
-  const { actions, problems } = run({ target, home, mode: 'check' });
+  const { actions, problems } = run({ target,mode: 'check' });
 
   assert.equal(problems, 2);
   assert.ok(actions.some((a) => a.status === 'problem' && /no hook installed/.test(a.message)));
@@ -167,12 +135,12 @@ test('--check fails on a removed hook and on a drifted copy', () => {
 });
 
 test('--update restores a drifted copy and touches nothing else', () => {
-  const { target, home } = scratchRepo();
-  run({ target, home, apply: true });
+  const { target } = scratchRepo();
+  run({ target,apply: true });
   appendFileSync(join(target, 'scripts', 'lint-docs.mjs'), '\n// local edit\n');
   writeFileSync(join(target, 'CLAUDE.md'), '# edited since install\n');
 
-  run({ target, home, mode: 'update', apply: true });
+  run({ target,mode: 'update', apply: true });
 
   assert.equal(
     readFileSync(join(target, 'scripts', 'lint-docs.mjs'), 'utf8'),
@@ -182,8 +150,8 @@ test('--update restores a drifted copy and touches nothing else', () => {
 });
 
 test('--apply vendors every slash command the toolkit ships', () => {
-  const { target, home } = scratchRepo();
-  run({ target, home, apply: true });
+  const { target } = scratchRepo();
+  run({ target,apply: true });
 
   for (const name of readdirSync(join(TOOLKIT, '.claude', 'commands')).filter((n) => n.endsWith('.md'))) {
     const vendored = join(target, '.claude', 'commands', name);
@@ -193,27 +161,27 @@ test('--apply vendors every slash command the toolkit ships', () => {
 });
 
 test('a repo edit to a command survives --apply and is reported, not counted against a clean check', () => {
-  const { target, home } = scratchRepo();
-  run({ target, home, apply: true });
+  const { target } = scratchRepo();
+  run({ target,apply: true });
   const slice = join(target, '.claude', 'commands', 'slice.md');
   writeFileSync(slice, '# our own slice workflow\n');
 
-  const install = run({ target, home, apply: true });
+  const install = run({ target,apply: true });
   assert.equal(readFileSync(slice, 'utf8'), '# our own slice workflow\n', 'an install must not clobber an adapted command');
   assert.deepEqual(statuses(install.actions, 'commands/slice.md'), ['keep']);
 
-  const { actions, problems } = run({ target, home, mode: 'check' });
+  const { actions, problems } = run({ target,mode: 'check' });
   assert.equal(problems, 0, 'command drift is informational — the install is not broken');
   assert.deepEqual(statuses(actions, 'commands/slice.md'), ['local']);
 });
 
 test('--update takes the toolkit version of an adapted command back', () => {
-  const { target, home } = scratchRepo();
-  run({ target, home, apply: true });
+  const { target } = scratchRepo();
+  run({ target,apply: true });
   const slice = join(target, '.claude', 'commands', 'slice.md');
   writeFileSync(slice, '# our own slice workflow\n');
 
-  run({ target, home, mode: 'update', apply: true });
+  run({ target,mode: 'update', apply: true });
 
   assert.equal(
     readFileSync(slice, 'utf8'),
@@ -222,11 +190,11 @@ test('--update takes the toolkit version of an adapted command back', () => {
 });
 
 test('a deleted command is reported by --check without failing it', () => {
-  const { target, home } = scratchRepo();
-  run({ target, home, apply: true });
+  const { target } = scratchRepo();
+  run({ target,apply: true });
   rmSync(join(target, '.claude', 'commands', 'audit.md'));
 
-  const { actions, problems } = run({ target, home, mode: 'check' });
+  const { actions, problems } = run({ target,mode: 'check' });
 
   assert.equal(problems, 0, 'a repo may decline a command; only machinery drift is a problem');
   assert.deepEqual(statuses(actions, 'commands/audit.md'), ['missing']);
@@ -240,22 +208,22 @@ const FRAMEWORK_CONFIG = `repos:
 `;
 
 test('a dry run over a repo with no adr/ does not predict a refusal that --apply disproves', () => {
-  const { target, home } = scratchRepo({ withAdr: false });
+  const { target } = scratchRepo({ withAdr: false });
 
-  const dry = run({ target, home });
+  const dry = run({ target });
   assert.equal(dry.problems, 0, 'the plan must not report a corpus error against a directory it plans to create');
   assert.ok(dry.actions.some((a) => a.path.endsWith('hooks/pre-commit') && a.status === 'would'));
 
   // ...and the plan holds: applying it really does install the hook.
-  assert.equal(run({ target, home, apply: true }).problems, 0);
+  assert.equal(run({ target,apply: true }).problems, 0);
   assert.ok(existsSync(join(target, '.git', 'hooks', 'pre-commit')));
 });
 
 test('a repo using the pre-commit framework gets the checks composed, not a symlink', () => {
-  const { target, home } = scratchRepo();
+  const { target } = scratchRepo();
   writeFileSync(join(target, '.pre-commit-config.yaml'), FRAMEWORK_CONFIG);
 
-  run({ target, home, apply: true });
+  run({ target,apply: true });
 
   const config = readFileSync(join(target, '.pre-commit-config.yaml'), 'utf8');
   assert.ok(config.startsWith(FRAMEWORK_CONFIG), 'the existing config must survive verbatim');
@@ -269,12 +237,12 @@ test('a repo using the pre-commit framework gets the checks composed, not a syml
 });
 
 test('composing is idempotent — a second run appends nothing', () => {
-  const { target, home } = scratchRepo();
+  const { target } = scratchRepo();
   writeFileSync(join(target, '.pre-commit-config.yaml'), FRAMEWORK_CONFIG);
-  run({ target, home, apply: true });
+  run({ target,apply: true });
   const once = readFileSync(join(target, '.pre-commit-config.yaml'), 'utf8');
 
-  run({ target, home, apply: true });
+  run({ target,apply: true });
 
   const twice = readFileSync(join(target, '.pre-commit-config.yaml'), 'utf8');
   assert.equal(twice, once, 'a re-run must not append a second copy');
@@ -282,11 +250,11 @@ test('composing is idempotent — a second run appends nothing', () => {
 });
 
 test('a configured-but-uninstalled framework is a problem, because nothing runs at all', () => {
-  const { target, home } = scratchRepo();
+  const { target } = scratchRepo();
   writeFileSync(join(target, '.pre-commit-config.yaml'), FRAMEWORK_CONFIG);
-  run({ target, home, apply: true });
+  run({ target,apply: true });
 
-  const { actions, problems } = run({ target, home, mode: 'check' });
+  const { actions, problems } = run({ target,mode: 'check' });
 
   assert.equal(problems, 1);
   assert.ok(actions.some((a) => a.status === 'problem' && /`pre-commit install`/.test(a.message)));
@@ -294,14 +262,14 @@ test('a configured-but-uninstalled framework is a problem, because nothing runs 
   // Once the framework's own dispatcher exists, the install is complete.
   mkdirSync(join(target, '.git', 'hooks'), { recursive: true });
   writeFileSync(join(target, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\n# framework\n');
-  assert.equal(run({ target, home, mode: 'check' }).problems, 0);
+  assert.equal(run({ target,mode: 'check' }).problems, 0);
 });
 
 test('an unrecognised pre-commit config is refused, never guessed at', () => {
-  const { target, home } = scratchRepo();
+  const { target } = scratchRepo();
   writeFileSync(join(target, '.pre-commit-config.yaml'), 'something: else\n');
 
-  const { actions, problems } = run({ target, home, apply: true });
+  const { actions, problems } = run({ target,apply: true });
 
   assert.ok(problems > 0);
   assert.ok(actions.some((a) => a.status === 'problem' && /refusing to edit it/.test(a.message)));
@@ -309,11 +277,11 @@ test('an unrecognised pre-commit config is refused, never guessed at', () => {
 });
 
 test('a directory that is not a git repo is refused', () => {
-  const { root, home } = scratchRepo();
+  const { root } = scratchRepo();
   const notARepo = join(root, 'plain');
   mkdirSync(notARepo, { recursive: true });
 
-  const { actions, problems } = run({ target: notARepo, home, apply: true });
+  const { actions, problems } = run({ target: notARepo, apply: true });
 
   assert.equal(problems, 1);
   assert.match(actions[0].message, /not a git repository/);
@@ -325,11 +293,11 @@ test('the CLI entry point runs when invoked through a symlink, as every npm bin 
   // import.meta.url resolves to the real file; a raw `file://${argv[1]}` guard is false and
   // main() silently never runs — `npx @isonimus/stele … --apply` exits 0 and scaffolds nothing.
   // Every other test drives initMethod() directly and so never exercised the entry guard.
-  const { root, target, home } = scratchRepo();
+  const { root, target } = scratchRepo();
   const link = join(root, 'stele-bin'); // stand-in for node_modules/.bin/stele
   symlinkSync(join(TOOLKIT, 'scripts', 'init-method.mjs'), link);
 
-  execFileSync('node', [link, target, '--apply'], { env: { ...process.env, HOME: home } });
+  execFileSync('node', [link, target, '--apply']);
 
   assert.ok(existsSync(join(target, 'CLAUDE.md')), 'main() ran: CLAUDE.md scaffolded');
   assert.ok(existsSync(join(target, '.git', 'hooks', 'pre-commit')), 'main() ran: hook installed');

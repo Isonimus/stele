@@ -15,7 +15,6 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, lstatSync, readlinkSync, symlinkSync, unlinkSync, readdirSync, realpathSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { homedir } from 'node:os';
 
 import { lint, loadDocs } from './lint-docs.mjs';
 import { renderIndex } from './build-index.mjs';
@@ -52,8 +51,6 @@ const SCAFFOLD = [
   ['LEDGER.md', 'templates/LEDGER.md'],
 ];
 
-const GLOBAL_LINK = 'global/CLAUDE.md';
-
 /** What .git/hooks/pre-commit must point at to count as installed. */
 const HOOK_LINK_TARGET = '../../.claude/hooks/pre-commit';
 
@@ -86,13 +83,6 @@ const FRAMEWORK_BLOCK = `
 
 const read = (path) => readFileSync(path, 'utf8');
 
-/** lstat that answers "what is here?" without throwing on absent. */
-function inspect(path) {
-  if (!existsSync(path) && !isSymlink(path)) return { kind: 'absent' };
-  if (isSymlink(path)) return { kind: 'symlink', points: readlinkSync(path) };
-  return { kind: 'file' };
-}
-
 /** existsSync follows symlinks, so a broken link reads as absent — the silent-vanish
  *  state ADR-0006 names. lstat is what distinguishes the two. */
 function isSymlink(path) {
@@ -101,37 +91,6 @@ function isSymlink(path) {
   } catch {
     return false;
   }
-}
-
-/**
- * The global ~/.claude/CLAUDE.md link, in every mode.
- *
- * Three states, not two: absent is legal (global conventions simply do not apply), a
- * symlink into this toolkit is installed, and anything else is somebody's own file that
- * an installer must never touch.
- */
-function globalLink({ toolkit, home, apply, report }) {
-  const path = join(home, '.claude', 'CLAUDE.md');
-  const want = join(toolkit, GLOBAL_LINK);
-  const found = inspect(path);
-
-  if (found.kind === 'symlink') {
-    const resolved = found.points.startsWith('/') ? found.points : join(dirname(path), found.points);
-    if (resolved === want) return report('ok', path, 'global conventions linked');
-    if (!existsSync(resolved)) {
-      return report('problem', path, `symlink is broken — points at ${found.points}, which does not exist. Global conventions are silently absent.`);
-    }
-    return report('problem', path, `symlink points at ${found.points}, not at this toolkit. Left untouched.`);
-  }
-
-  if (found.kind === 'file') {
-    return report('problem', path, `a real file already lives here — refusing to overwrite it. Compare with \`diff ${path} ${want}\` and merge by hand.`);
-  }
-
-  if (!apply) return report('would', path, `link → ${want}`);
-  mkdirSync(dirname(path), { recursive: true });
-  symlinkSync(want, path);
-  return report('wrote', path, `linked → ${want}`);
 }
 
 /** The linter's error findings for a repo.
@@ -341,12 +300,11 @@ function check({ target, toolkit, report }) {
  * @param {object} options
  * @param {string} options.target   repo to install into
  * @param {string} [options.toolkit] this kit's root (overridable for tests)
- * @param {string} [options.home]    HOME for the global link (injected by tests, never guessed)
  * @param {'install'|'check'|'update'} [options.mode]
  * @param {boolean} [options.apply]  false = dry run, the default
  * @returns {{actions: Array<{status: string, path: string, message: string}>, problems: number}}
  */
-export function initMethod({ target, toolkit = TOOLKIT, home = homedir(), mode = 'install', apply = false }) {
+export function initMethod({ target, toolkit = TOOLKIT, mode = 'install', apply = false }) {
   const actions = [];
   const report = (status, path, message) => actions.push({ status, path, message });
 
@@ -357,7 +315,6 @@ export function initMethod({ target, toolkit = TOOLKIT, home = homedir(), mode =
 
   if (mode === 'check') {
     check({ target, toolkit, report });
-    globalLink({ toolkit, home, apply: false, report });
   } else if (mode === 'update') {
     vendor({ target, toolkit, apply, report });
     vendorCommands({ target, toolkit, apply, force: true, report });
@@ -367,7 +324,6 @@ export function initMethod({ target, toolkit = TOOLKIT, home = homedir(), mode =
     vendorCommands({ target, toolkit, apply, force: false, report });
     buildIndex({ target, apply, report });
     installHook({ target, apply, report });
-    globalLink({ toolkit, home, apply, report });
   }
 
   return { actions, problems: actions.filter((a) => a.status === 'problem').length };

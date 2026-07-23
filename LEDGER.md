@@ -48,6 +48,9 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
 - [audit] 36 boxel ADRs carry dated `## Amendment` blocks. The `amended` status covers
   them, but whether an amendment should instead be a superseding ADR is unresolved
   (ADR-0002).
+- [deferred] npm registry cleanup: `npm unpublish @isonimus/stele@0.1.0` and `@0.1.1` (both
+  shipped the author's personal `global/CLAUDE.md`) and publish the clean `0.1.2`. An
+  operational step run outside the repo; delete this line once done (ADR-0016).
 
 ## Resolved
 

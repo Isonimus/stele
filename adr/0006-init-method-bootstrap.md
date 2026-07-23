@@ -2,7 +2,7 @@
 id: '0006'
 title: "/init-method installs the kit, and refuses to install a hook that would brick the repo"
 type: architecture
-status: accepted
+status: amended
 date: 2026-07-22
 supersedes: []
 superseded_by: []
@@ -97,3 +97,17 @@ unwired verify script (R11-red) blocks hook installation while everything else s
 lands; an existing `CLAUDE.md` survives; `--check` fails on a deleted hook and on a
 drifted copy; a real `~/.claude/CLAUDE.md` is refused rather than clobbered. The global
 link is exercised against an injected fake home directory, never the operator's own.
+
+## Amendment — 2026-07-23
+
+The global-conventions link described above — `/init-method` managing the operator's
+`~/.claude/CLAUDE.md` as a three-state link into the toolkit — is **withdrawn** (ADR-0016). It
+predated npx distribution (ADR-0015): under `npx` the toolkit is an ephemeral cache directory,
+so linking a persistent `$HOME` file into it is broken by construction, and the step also shipped
+the author's personal conventions and force-linked them into every consumer's home. Linking
+global conventions is a personal, machine-level choice, not part of vendoring the kit into a repo.
+
+The rest of this ADR stands: `/init-method` still installs the kit and still refuses to install a
+hook on a linter-red corpus. Only the global-link handling — and the `home`/`globalLink` machinery
+and its fixtures — is removed. See ADR-0016 for the reasoning; this is an amendment rather than a
+supersession because a single sub-decision changed, not the decision this ADR is named for.
