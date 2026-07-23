@@ -40,6 +40,11 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   rule 8. Blocked on settling a repo-specific file scope — what counts as source, what is
   vendored/generated and skipped — which the document tree does not have. Decide the scope,
   then ship the rule; until then the presence half is review-only via `/wrap-up` (ADR-0012).
+- [feature] Build `scripts/gen-capability-index.mjs`: a best-effort, zero-dependency scanner
+  that reads exported functions/classes/constants and emits `docs/CAPABILITIES.md` (a
+  Generated doc), so an assistant can grep what reusable logic exists before writing its own.
+  Opt-in by wiring into `package.json`; design settled, build outstanding — needs the export
+  scanner and its regression fixtures (ADR-0013).
 - [audit] 36 boxel ADRs carry dated `## Amendment` blocks. The `amended` status covers
   them, but whether an amendment should instead be a superseding ADR is unresolved
   (ADR-0002).

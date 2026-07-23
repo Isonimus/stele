@@ -51,7 +51,13 @@ Steps:
      ```
 
    - `## Design` — the approach; cite measured numbers from a probe where a design
-     question has a measurable answer, not estimates.
+     question has a measurable answer, not estimates. State **what existing code was
+     considered**: what you searched for, what you reused, and what you deliberately did
+     *not* reuse and why (ADR-0013). This is not a mandate to reuse — the wrong abstraction
+     costs more than a duplication (global §3, rule of three); it makes the
+     reuse-or-duplicate choice *visible*, so an un-considered duplication is caught at
+     review. It is checked by human read-through, not the linter: whether you truly searched
+     is the coverage question no machine decides.
    - `## Verification` — **required.** Name the unit tests, and if the behaviour cannot be
      asserted in a unit test (rendering, worldgen, physics, timing), name the
      `scripts/<slice>-verify.mjs` script and confirm it is wired into `package.json`
