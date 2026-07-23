@@ -22,7 +22,7 @@
 | 0012 | Cite the governing ADR at the code site | accepted |
 | 0013 | Surface the reuse decision; a generated capability index | accepted |
 | 0014 | Rename the method to Stele | accepted |
-| 0015 | Distribution by npx-delivered vendoring, not a runtime dependency | accepted |
+| 0015 | Distribution by npx-delivered vendoring, not a runtime dependency | amended |
 
 ## Slices
 

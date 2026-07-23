@@ -12,7 +12,7 @@
 // documents it would report "0 document(s) — ok" (the reason rule 10 exists), certifying
 // an install that checks nothing.
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, lstatSync, readlinkSync, symlinkSync, unlinkSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, lstatSync, readlinkSync, symlinkSync, unlinkSync, readdirSync, realpathSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
@@ -394,6 +394,10 @@ function main(argv) {
   return problems > 0 ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// A bin is invoked through a symlink (npm links node_modules/.bin/stele → this file), so
+// process.argv[1] is the LINK path while import.meta.url resolves to the real file — a raw
+// `file://${argv[1]}` compare is false under npx and main() silently never runs, no-opping
+// the whole install (ADR-0015 amendment). Resolve both to real paths before comparing.
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   process.exit(main(process.argv.slice(2)));
 }

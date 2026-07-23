@@ -10,7 +10,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync, lstatSync, readlinkSync, readFileSync, appendFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync, lstatSync, readlinkSync, readFileSync, appendFileSync, readdirSync, symlinkSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -317,4 +317,20 @@ test('a directory that is not a git repo is refused', () => {
 
   assert.equal(problems, 1);
   assert.match(actions[0].message, /not a git repository/);
+});
+
+test('the CLI entry point runs when invoked through a symlink, as every npm bin is', () => {
+  // Regression (ADR-0015 amendment): npm links node_modules/.bin/stele → init-method.mjs, so
+  // the published bin is always run via a symlink. process.argv[1] is then the LINK path while
+  // import.meta.url resolves to the real file; a raw `file://${argv[1]}` guard is false and
+  // main() silently never runs — `npx @isonimus/stele … --apply` exits 0 and scaffolds nothing.
+  // Every other test drives initMethod() directly and so never exercised the entry guard.
+  const { root, target, home } = scratchRepo();
+  const link = join(root, 'stele-bin'); // stand-in for node_modules/.bin/stele
+  symlinkSync(join(TOOLKIT, 'scripts', 'init-method.mjs'), link);
+
+  execFileSync('node', [link, target, '--apply'], { env: { ...process.env, HOME: home } });
+
+  assert.ok(existsSync(join(target, 'CLAUDE.md')), 'main() ran: CLAUDE.md scaffolded');
+  assert.ok(existsSync(join(target, '.git', 'hooks', 'pre-commit')), 'main() ran: hook installed');
 });

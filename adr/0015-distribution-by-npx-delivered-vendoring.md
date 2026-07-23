@@ -2,7 +2,7 @@
 id: 0015
 title: Distribution by npx-delivered vendoring, not a runtime dependency
 type: architecture
-status: accepted
+status: amended
 date: 2026-07-23
 supersedes: []
 superseded_by: []
@@ -64,3 +64,24 @@ Distribute Stele as an **npx-delivered installer that vendors**, never as a runt
   (`@isonimus`) share the same owner, so package and source resolve to one identity.
 - **The scoped name is forced, not chosen, and costs nothing in use.** After the first `npx
   @isonimus/stele`, the installed command is `stele`; the scope shows only in the install line.
+
+## Amendment — 2026-07-23
+
+The claim above that "the `bin` needs no path fix" was right about *toolkit resolution* — the
+`TOOLKIT` constant derives from `import.meta.url` and is unaffected by how the script is invoked
+— but it missed the CLI *entry-point guard*, and the two are not the same thing.
+
+A `bin` is invoked through a symlink (npm links `node_modules/.bin/stele` → the real
+`init-method.mjs`), so at runtime `process.argv[1]` is the *symlink* path while `import.meta.url`
+resolves to the *real* file. The original guard,
+`import.meta.url === \`file://${process.argv[1]}\``, is therefore false under `npx`, and `main()`
+never runs: the published `0.1.0` bin exited 0 and scaffolded nothing, an invisible no-op on the
+one path this ADR made primary. It went undetected because every test drove the exported
+`initMethod()` directly and none exercised the guard.
+
+Fixed by resolving both sides to real paths before comparing —
+`realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)` — with a regression test that
+invokes the bin *through a symlink*, and a WHY comment at the site (ADR-0012) so the guard is not
+"simplified" back. Shipped in `0.1.1`. The decision this ADR records — npx-delivered vendoring,
+not a runtime dependency — is unchanged; only the incidental "no path fix" claim needed this
+correction, which is why this is an amendment and not a superseding ADR.

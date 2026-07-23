@@ -1,6 +1,6 @@
 {
   "name": "@isonimus/stele",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "A linted, installable ADR workflow for git projects using Claude as an assistant",
   "keywords": [
