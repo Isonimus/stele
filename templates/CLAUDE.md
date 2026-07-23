@@ -7,7 +7,7 @@ Stack: {{STACK}}
 General working practices — quality bar, commit hygiene, delegation, correction, language
 — live in `~/.claude/CLAUDE.md` and apply here without being restated. This file carries
 only what is specific to **this** repo. Restating a global rule here would create a second
-copy with no sync path, which is the failure claude-method:ADR-0005 exists to prevent.
+copy with no sync path, which is the failure stele:ADR-0005 exists to prevent.
 
 ## 1. Document taxonomy — four kinds
 
@@ -18,7 +18,7 @@ Every document is exactly one of four things.
 | **Immutable** | `adr/*.md`, `slices/*.md` | Written once. Body prose is never edited. Only status/supersession fields may change. |
 | **Generated** | `adr/INDEX.md` | Built by script from frontmatter. Never hand-edited. |
 | **Ledger** | `LEDGER.md` | Exactly one per repo. The only hand-maintained tracker. |
-| **Live doc** | `README.md`, `docs/*.md` | Describes how something behaves *now*. Updated **in the same change** as the thing it describes, and cited from this file so it is never orphaned (claude-method:ADR-0010). |
+| **Live doc** | `README.md`, `docs/*.md` | Describes how something behaves *now*. Updated **in the same change** as the thing it describes, and cited from this file so it is never orphaned (stele:ADR-0010). |
 
 - **ADR** — a decision later work must obey (a mechanism, data format, or boundary).
   Asserts *"on date X we chose Y because Z"*: a historical claim, true forever.
@@ -93,7 +93,7 @@ reason, so nobody "fixes" a deliberate choice.
 
 These live **here, in the repo** — not in assistant memory. A rule that governs the
 codebase must be greppable, diffable, reviewable, and survive a change of machine
-(claude-method:ADR-0005).
+(stele:ADR-0005).
 
 Each row declares how it is **enforced**, so an aspiration is never mistaken for a
 guarantee:
@@ -103,7 +103,7 @@ guarantee:
 - `review-only` — enforceable only by human judgement, so `/wrap-up` is the enforcement.
 
 The declaration is a convention checked at review, not by the linter — the linter does not
-read this file (claude-method:ADR-0004). What it *does* enforce is that every `verified_by` script is
+read this file (stele:ADR-0004). What it *does* enforce is that every `verified_by` script is
 actually wired (R11), so a row cannot claim a check that runs nowhere.
 
 | # | Invariant | Source | Enforced by |

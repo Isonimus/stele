@@ -108,6 +108,6 @@ test('every record resolves to a known status', () => {
 // ground truth before the one-time migration — which it did, successfully. That premise
 // has now expired: boxel is migrated and still growing (a parallel session added 0130),
 // so its count/census assertions can only break on boxel's own evolution, never catch a
-// claude-method regression — a fragile test by our own rule (§3). The frozen
+// stele regression — a fragile test by our own rule (§3). The frozen
 // `legacy-corpus` fixture reproduces all four defects and six traps; the "finds exactly
 // the four genuine defects" test above is the durable known-answer guard.

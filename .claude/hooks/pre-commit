@@ -1,5 +1,5 @@
 #!/bin/sh
-# claude-method pre-commit hook — the load-bearing enforcement decision (ADR-0003).
+# Stele pre-commit hook — the load-bearing enforcement decision (ADR-0003).
 #
 # A linter nobody runs is another convention resting on memory, which is the failure this
 # project exists to fix. This hook makes the checks mechanical: no green corpus, no commit.

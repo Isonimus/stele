@@ -39,7 +39,7 @@ into 12 files across 8 projects.
   add a row to the §5 invariants table citing the ADR that created it. If this repo has no
   `CLAUDE.md`, scaffold one from `templates/CLAUDE.md` first; without it there is no
   destination and the fact will silently fall back to memory (ADR-0005).
-- **Global `CLAUDE.md`** — edit `global/CLAUDE.md` in the `claude-method` repo, never the
+- **Global `CLAUDE.md`** — edit `global/CLAUDE.md` in the `stele` repo, never the
   `~/.claude/CLAUDE.md` symlink target directly. Keep it dense: it loads into every session
   in every repo.
 - **`LEDGER.md`** — one line, `- [type] description (ADR-NNNN)`, citing the source ADR if

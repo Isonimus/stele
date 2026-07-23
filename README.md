@@ -1,4 +1,4 @@
-# claude-method
+# Stele
 
 A zero-dependency workflow that keeps a codebase's **decisions, work, and definition of
 done** honest — enforced by a git hook and CI, not by anyone remembering to.
@@ -27,7 +27,7 @@ failures recur:
   acceptance criteria ships with two of them, because the intent was never in a form that
   made the omission visible.
 
-claude-method's answer is a single principle: **if a convention matters, it is executable;
+Stele's answer is a single principle: **if a convention matters, it is executable;
 if it genuinely cannot be checked, that limit is stated out loud rather than trusted.**
 
 ---
@@ -59,13 +59,21 @@ valuable thing this workflow produces, and an in-place edit destroys it.
 
 ## Quickstart
 
-Install into a git repo — dry-run first, always ([ADR-0006](adr/0006-init-method-bootstrap.md)):
+Install into a git repo — dry-run first, always ([ADR-0006](adr/0006-init-method-bootstrap.md)).
+Stele is delivered by `npx`, then **vendored** into the repo; it is never a runtime
+dependency ([ADR-0015](adr/0015-distribution-by-npx-delivered-vendoring.md)):
 
 ```
-node scripts/init-method.mjs <repo-root>            # dry run: shows what it would do
-node scripts/init-method.mjs <repo-root> --apply    # install the kit
-node scripts/init-method.mjs <repo-root> --check    # verify an install is intact
-node scripts/init-method.mjs <repo-root> --update   # re-sync vendored machinery
+npx @isonimus/stele <repo-root>            # dry run: shows what it would do
+npx @isonimus/stele <repo-root> --apply    # install the kit
+npx @isonimus/stele <repo-root> --check    # verify an install is intact
+npx @isonimus/stele <repo-root> --update   # re-sync vendored machinery
+```
+
+From a clone of this repo, the same entry point runs directly:
+
+```
+node scripts/init-method.mjs <repo-root> --apply
 ```
 
 It installs `CLAUDE.md`, `LEDGER.md`, the linter, the index builder, and a pre-commit hook —
@@ -88,7 +96,7 @@ Run in Claude Code as `/<name>`.
 | `/adr <title>` | Scaffold a new Architecture Decision Record, frontmatter pre-filled. |
 | `/slice <title>` | Scaffold a new slice (one feature work-unit). |
 | `/audit` | Full-corpus health check — run every invariant, surface warnings and drift. |
-| `/wrap-up` | End-of-task gate — run the checks and ask the three questions that get forgotten. |
+| `/wrap-up` | End-of-task gate — run the checks and ask the four questions that get forgotten. |
 | `/remember <fact>` | Route a fact to the destination that governs it (see [Where things live](#where-things-live)). |
 | `/init-method` | Install the kit into a git repo. |
 

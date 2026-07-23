@@ -1,6 +1,6 @@
 # Ledger
 
-The single mutable file in this repo (claude-method:ADR-0001). Everything else is
+The single mutable file in this repo (stele:ADR-0001). Everything else is
 immutable or generated. Open work, deferrals, and known defects all live here — there is
 no second tracking file, because two files require manual sync and manual sync does not
 happen.
@@ -12,7 +12,7 @@ no update. Single writer, one direction.
 Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `deferred` |
 `audit`. Cite the source ADR where one exists; rule 8 checks that the citation resolves.
 A decision that lives in **another** repo is cited `<repo>:ADR-NNNN` — the linter cannot
-open that corpus, so it skips qualified references (claude-method:ADR-0009).
+open that corpus, so it skips qualified references (stele:ADR-0009).
 
 ## Open
 

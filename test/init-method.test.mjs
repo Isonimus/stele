@@ -259,8 +259,8 @@ test('a repo using the pre-commit framework gets the checks composed, not a syml
 
   const config = readFileSync(join(target, '.pre-commit-config.yaml'), 'utf8');
   assert.ok(config.startsWith(FRAMEWORK_CONFIG), 'the existing config must survive verbatim');
-  assert.match(config, /id: claude-method-docs/);
-  assert.match(config, /id: claude-method-index/);
+  assert.match(config, /id: stele-docs/);
+  assert.match(config, /id: stele-index/);
   assert.equal(
     existsSync(join(target, '.git', 'hooks', 'pre-commit')),
     false,
@@ -278,7 +278,7 @@ test('composing is idempotent — a second run appends nothing', () => {
 
   const twice = readFileSync(join(target, '.pre-commit-config.yaml'), 'utf8');
   assert.equal(twice, once, 'a re-run must not append a second copy');
-  assert.equal(twice.match(/id: claude-method-docs/g)?.length, 1, 'the block must be present exactly once');
+  assert.equal(twice.match(/id: stele-docs/g)?.length, 1, 'the block must be present exactly once');
 });
 
 test('a configured-but-uninstalled framework is a problem, because nothing runs at all', () => {

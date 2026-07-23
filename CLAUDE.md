@@ -1,4 +1,4 @@
-# claude-method — Project Conventions
+# Stele — Project Conventions
 
 A linted, installable ADR workflow for git projects using Claude as an assistant.
 This repo dogfoods its own method: its rules are its ADRs, and its linter checks itself.

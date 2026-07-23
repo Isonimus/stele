@@ -1,11 +1,42 @@
 {
-  "name": "claude-method",
+  "name": "@isonimus/stele",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "A linted, installable ADR workflow for git projects using Claude as an assistant",
+  "keywords": [
+    "adr",
+    "architecture-decision-record",
+    "claude",
+    "pre-commit",
+    "documentation",
+    "workflow",
+    "linter"
+  ],
+  "author": "Iker Laforga",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Isonimus/stele.git"
+  },
+  "homepage": "https://github.com/Isonimus/stele#readme",
+  "bugs": "https://github.com/Isonimus/stele/issues",
   "engines": {
     "node": ">=20"
+  },
+  "bin": {
+    "stele": "scripts/init-method.mjs"
+  },
+  "files": [
+    "scripts/",
+    "templates/",
+    "global/",
+    ".claude/commands/",
+    ".claude/hooks/",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",

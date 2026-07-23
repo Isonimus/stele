@@ -62,11 +62,11 @@ const HOOK_LINK_TARGET = '../../.claude/hooks/pre-commit';
 const FRAMEWORK_CONFIG = '.pre-commit-config.yaml';
 
 /** Identifies our block on re-runs, so composing is idempotent. */
-const FRAMEWORK_HOOK_ID = 'claude-method-docs';
+const FRAMEWORK_HOOK_ID = 'stele-docs';
 
 /** Appended verbatim. Mirrors .claude/hooks/pre-commit — the same two commands. */
 const FRAMEWORK_BLOCK = `
-  # Doc invariants (claude-method ADR-0003, composed by /init-method per ADR-0008).
+  # Doc invariants (stele:ADR-0003, composed by /init-method per stele:ADR-0008).
   # Zero-dependency and language: system, so there is nothing to install but node.
   - repo: local
     hooks:
@@ -76,7 +76,7 @@ const FRAMEWORK_BLOCK = `
         language: system
         pass_filenames: false
         always_run: true
-      - id: claude-method-index
+      - id: stele-index
         name: adr/INDEX.md matches the corpus
         entry: node scripts/build-index.mjs --check .
         language: system
@@ -276,7 +276,7 @@ function composeHook({ target, apply, report }) {
 
   // Refuse rather than guess: this is a textual append into a file we do not own.
   if (!/^repos:/m.test(config)) {
-    return report('problem', path, 'no top-level `repos:` key — unrecognised shape, refusing to edit it. Add the claude-method-docs block by hand.');
+    return report('problem', path, 'no top-level `repos:` key — unrecognised shape, refusing to edit it. Add the stele-docs block by hand.');
   }
 
   if (config.includes(FRAMEWORK_HOOK_ID)) report('ok', path, 'doc checks composed into the framework');
