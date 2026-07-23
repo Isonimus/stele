@@ -13,7 +13,13 @@ Steps:
 
 1. Compute the next free id: highest ordinal in `adr/` (and `slices/` if present) plus
    one, zero-padded to four digits.
-2. Write the file opening with the ADR-0002 frontmatter block, `type: slice`:
+2. Scan `LEDGER.md` for open items this slice touches — a `[feature]` it delivers, a
+   `[bug]` it fixes, a `[deferred]` it finally picks up. Fold each relevant one into
+   `## Goal` so the slice knows the history it is answering, and **delete the line from the
+   ledger for any item this slice closes** — closing an item means deleting its line (see
+   the ledger's own header). If nothing relates, note nothing; this is a read, not a
+   requirement to invent links.
+3. Write the file opening with the ADR-0002 frontmatter block, `type: slice`:
 
    ```
    ---
@@ -27,8 +33,8 @@ Steps:
    ---
    ```
 
-3. Body sections, written before you code:
-   - `## Goal` — what ships and why, in one paragraph.
+4. Body sections, written before you code:
+   - `## Goal` — what ships and why, in one paragraph. Fold in any ledger items from step 2.
    - `## Definition of Done` — **required.** The acceptance criteria as one or more
      **Given / When / Then** scenarios, written before you code (ADR-0011). This is the
      grammar, not a toolchain: plain markdown steps, no Cucumber. State the observable
@@ -55,6 +61,6 @@ Steps:
    - `## As built` — filled in at merge: what actually shipped, in past tense, confirming
      each Definition-of-Done scenario was met or recording the deviation. This is the
      freeze step.
-4. Regenerate the index and run the linter; both green before done.
+5. Regenerate the index and run the linter; both green before done.
 
 Title argument: $ARGUMENTS

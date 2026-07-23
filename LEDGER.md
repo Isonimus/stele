@@ -35,6 +35,11 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   signal separates them — the same absence that motivates ADR-0002. Decide whether batch is
   retired going forward or stays a legitimate kind, and retype the content-batches by hand
   (ADR-0002).
+- [deferred] Source-side citation resolve-check: a rule that reads `ADR-NNNN` tokens in
+  source comments and fails when the citation does not resolve, the code-site sibling of
+  rule 8. Blocked on settling a repo-specific file scope — what counts as source, what is
+  vendored/generated and skipped — which the document tree does not have. Decide the scope,
+  then ship the rule; until then the presence half is review-only via `/wrap-up` (ADR-0012).
 - [audit] 36 boxel ADRs carry dated `## Amendment` blocks. The `amended` status covers
   them, but whether an amendment should instead be a superseding ADR is unresolved
   (ADR-0002).
