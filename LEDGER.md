@@ -51,6 +51,31 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   behind it. Revisit after several triggered passes, citing what they found and what the
   finding-to-noise ratio actually was — if it earns a rule, that rule is its own ADR
   (ADR-0017).
+- [bug] The pre-commit hook checks the **working tree**, not the commit. Reproduced: stage a
+  broken ADR, fix it without staging the fix — hook reports 0 errors, the commit lands red
+  (R6). Same route lets a regenerated-but-unstaged `adr/INDEX.md` pass `--check` while HEAD
+  keeps the stale one. CI is the backstop, so it leaks rather than escapes. The composed
+  install is already correct — the `pre-commit` framework stashes unstaged changes — so the
+  two install shapes ADR-0008 kept equivalent are not (ADR-0003).
+- [feature] ADR body immutability is enforced by nothing. Reproduced: rewrote the body of a
+  committed ADR to say the opposite of its decision, hook green. Not an R-rule — `lint(root)`
+  is a pure function over one directory and must stay one — so it is a sibling of
+  `build-index --check`, diffing staged `adr|slices/*.md` against `HEAD:<path>` below the
+  closing `---`. Needs a decided escape hatch for genuine typo fixes, which makes it an ADR
+  (ADR-0010).
+- [bug] Citations resolve only in `LEDGER.md` (R8) and doc bodies (R9). The ~40 `ADR-NNNN`
+  references in `CLAUDE.md`, `README.md`, `templates/CLAUDE.md` and `.claude/commands/*.md`,
+  and the README's `](adr/….md)` path links, are unchecked. All resolve today — this is
+  prevention. `CLAUDE.md` is read at the start of every session, so a citation rotting there
+  routes every future session to a decision that does not exist (ADR-0009).
+- [bug] `date` is unvalidated but load-bearing: it picks R12/R13 severity by string compare
+  against `SLICE_SECTIONS_SINCE`. `date: sometime last tuesday` lints clean today only
+  because `'s' > '2'`. A new slice with copy-pasted frontmatter dated before the cutoff grades
+  as legacy and ships with no Definition of Done on a green build (ADR-0011).
+- [bug] An ADR may supersede itself: `supersedes: [0002]` + `superseded_by: [0002]` +
+  `status: superseded` lints clean. Two lines in the supersession rule (ADR-0003).
+- [bug] `sectionText` does not skip fenced code blocks, so a `## Verification` quoted inside a
+  code sample satisfies R12. Reasoned from the regex, not reproduced (ADR-0011).
 - [audit] 36 boxel ADRs carry dated `## Amendment` blocks. The `amended` status covers
   them, but whether an amendment should instead be a superseding ADR is unresolved
   (ADR-0002).
