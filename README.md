@@ -96,7 +96,7 @@ Run in Claude Code as `/<name>`.
 | `/adr <title>` | Scaffold a new Architecture Decision Record, frontmatter pre-filled. |
 | `/slice <title>` | Scaffold a new slice (one feature work-unit). |
 | `/audit` | Full-corpus health check — run every invariant, surface warnings and drift. |
-| `/wrap-up` | End-of-task gate — run the checks and ask the four questions that get forgotten. |
+| `/wrap-up` | End-of-task gate — run the checks, run the adversarial pass when it triggers, and ask the four questions that get forgotten. |
 | `/remember <fact>` | Route a fact to the destination that governs it (see [Where things live](#where-things-live)). |
 | `/init-method` | Install the kit into a git repo. |
 
@@ -168,6 +168,15 @@ and in CI. Its rules are graded by what can actually be mechanised
    none can be decided by reading one version of a file. These are surfaced by `/wrap-up` for
    a human read-through, never claimed as guaranteed. A linter that pretended to check them
    would be a false green, the exact failure this project exists to prevent.
+
+   This layer has one instrument, and it is not a linter: the **adversarial pass**
+   ([ADR-0017](adr/0017-adversarial-review-is-the-coverage-mechanism.md)). Every coverage
+   question has the form "is what you wrote sufficient?" and is addressed to the person who
+   just wrote it — who already believes it is, which is why the code looks that way. So
+   `/wrap-up` spawns a reviewer that is **blind to intent but aware of law**: it gets the
+   diff, `CLAUDE.md` and the ADR index, never the rationale. Findings must state a concrete
+   failure, get reproduced before they are acted on, and — when correctly *rejected* — get
+   written at the code site (ADR-0012) so the next fresh reader does not raise them again.
 
 The dividing line is the whole point: **a rule is enforced, legacy-tolerated, or explicitly
 declared uncheckable — never silently trusted.**

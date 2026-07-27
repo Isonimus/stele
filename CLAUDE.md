@@ -47,6 +47,13 @@ Run `/wrap-up` before finishing a task. It runs the linter and asks the three qu
 that actually get forgotten: did this change a user-facing API, record a decision, or
 defer something?
 
+What a linter cannot check, a **fresh reader** can. Where a change touches a §4 invariant,
+a public API, a data format, or a risky Definition of Done scenario, `/wrap-up` runs an
+adversarial pass: a subagent given the diff and the ADR corpus but **not** the author's
+reasoning, whose findings must state a concrete failure and get reproduced before they are
+acted on (ADR-0017). Correctly *rejected* findings get written at the code site (ADR-0012)
+— otherwise every future fresh reader raises them again.
+
 ## 3. Quality bar
 
 - **Every relevant piece of logic gets a regression test.** No excuses — and no
