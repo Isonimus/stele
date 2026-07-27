@@ -21,9 +21,49 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
+# The checks run against the COMMIT, not the working tree (ADR-0018). Reading the working
+# tree passes on a state no commit will ever contain: stage a broken ADR, fix it without
+# staging the fix, and the hook is green while HEAD lands red. `git write-tree` is used
+# rather than `git stash --keep-index` because it touches nothing the operator owns.
+tree=$(git write-tree)
+
+staged=$(mktemp -d)
+trap 'rm -rf "$staged"' EXIT
+
+# Only what the two checks actually read. The full tree costs ~1.1ms per tracked file —
+# ~11s on a 10k-file repo, which is a hook people delete (ADR-0018 has the numbers).
+# ADR-0018: a rule that starts reading a file outside this list must extend it here, or
+# the hook checks a file it never extracted. Paths absent from the tree are dropped,
+# because `git archive` fails on a pathspec that matches nothing.
+paths=''
+for candidate in adr slices LEDGER.md scripts package.json; do
+  if git cat-file -e "$tree:$candidate" 2>/dev/null; then
+    paths="$paths $candidate"
+  fi
+done
+
+# No doc path in the tree at all is not a reason to skip: the checks then run against an
+# empty directory and rule 10 reports "no adr/ or slices/ directory here", which is the
+# right diagnosis rather than a silent pass.
+if [ -n "$paths" ]; then
+  # shellcheck disable=SC2086  # word splitting is the point: $paths is a pathspec list.
+  git archive "$tree" -- $paths | tar -x -C "$staged"
+fi
+
+# The commit's own checkers, not the working tree's (ADR-0018) — grading a commit with a
+# linter it does not contain is the same defect one turn removed. No fallback to the
+# working copy: a silent fallback is the thing this hook exists to remove.
+for checker in lint-docs.mjs build-index.mjs; do
+  if [ ! -f "$staged/scripts/$checker" ]; then
+    echo "pre-commit: scripts/$checker is not in the commit — cannot check it against itself." >&2
+    echo "            Stage the vendored checker, or run /init-method --update." >&2
+    exit 1
+  fi
+done
+
 # 1. Invariants must hold (rules 1–8 block; rule 9 warns). Zero-dependency, so no install.
-node scripts/lint-docs.mjs .
+node "$staged/scripts/lint-docs.mjs" "$staged"
 
 # 2. The generated index must match the corpus. A stale INDEX.md is drift by another name;
 #    regenerate and stage it rather than letting it fall behind.
-node scripts/build-index.mjs --check .
+node "$staged/scripts/build-index.mjs" --check "$staged"

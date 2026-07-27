@@ -61,7 +61,16 @@ const FRAMEWORK_CONFIG = '.pre-commit-config.yaml';
 /** Identifies our block on re-runs, so composing is idempotent. */
 const FRAMEWORK_HOOK_ID = 'stele-docs';
 
-/** Appended verbatim. Mirrors .claude/hooks/pre-commit — the same two commands. */
+/**
+ * Appended verbatim. Mirrors .claude/hooks/pre-commit — the same two checks.
+ *
+ * These deliberately run against the working tree (`.`), where the hook materialises the
+ * staged tree first (ADR-0018). It is not an oversight and must not be "fixed" into a
+ * copy of that machinery: the framework stashes unstaged changes before dispatching, so
+ * by the time these entries run the working tree already *is* the index. Reproducing the
+ * archive dance here would duplicate what the framework provides — which is the whole
+ * reason ADR-0008 chose to compose with it rather than fight it for the file.
+ */
 const FRAMEWORK_BLOCK = `
   # Doc invariants (stele:ADR-0003, composed by /init-method per stele:ADR-0008).
   # Zero-dependency and language: system, so there is nothing to install but node.

@@ -152,7 +152,10 @@ decision, and decisions are immutable records.
 ## Enforcement, in three honest layers
 
 The linter ([`scripts/lint-docs.mjs`](scripts/lint-docs.mjs)) runs from the pre-commit hook
-and in CI. Its rules are graded by what can actually be mechanised
+and in CI. The hook checks the **commit**, not the files on disk — it materialises the staged
+tree and runs the checks against that, so a fix you forgot to `git add` cannot green a commit
+that lands red ([ADR-0018](adr/0018-the-hook-checks-the-commit-not-the-working-tree.md)). Rules
+are graded by what can actually be mechanised
 ([ADR-0003](adr/0003-enforcement-by-hook.md)):
 
 1. **Machine-checked (error — blocks the commit).** Frontmatter shape and completeness
