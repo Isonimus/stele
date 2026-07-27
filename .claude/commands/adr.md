@@ -10,8 +10,9 @@ rather than a durable decision, use `/slice` instead.
 
 Steps:
 
-1. Compute the next free id: the highest ordinal in `adr/` plus one, zero-padded to four
-   digits. Do not reuse or renumber.
+1. Compute the next free id: the highest ordinal across **both** `adr/` and `slices/` plus
+   one, zero-padded to four digits. ADRs and slices share one id space — rule 2 fails on a
+   duplicate id whichever directory it sits in. Do not reuse or renumber.
 2. Choose the `type`: `architecture` for a durable decision, `slice` for a feature unit,
    `batch` only if it genuinely bundles several unrelated decisions that cannot map 1:1.
 3. Write `adr/NNNN-<kebab-title>.md` opening with the stele:ADR-0002 frontmatter block:
