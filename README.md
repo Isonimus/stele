@@ -175,11 +175,13 @@ that lands red ([ADR-0018](adr/0018-the-hook-checks-the-commit-not-the-working-t
 are graded by what can actually be mechanised
 ([ADR-0003](adr/0003-enforcement-by-hook.md)):
 
-1. **Machine-checked (error — blocks the commit).** Frontmatter shape and completeness
-   (R1), id/filename agreement and uniqueness (R2), closed status/type vocabulary (R3), the
-   supersession graph (R4–R7), ledger citations resolve (R8), the linter isn't pointed at an
-   empty corpus (R10), verify scripts are wired (R11), slices carry their required sections
-   (R12/R13), and citations and links resolve in the prose that is read as *instruction* —
+1. **Machine-checked (error — blocks the commit).** Frontmatter shape, completeness and a
+   real ISO date (R1), id/filename agreement and uniqueness (R2), closed status/type
+   vocabulary (R3), the supersession graph (R4–R7), ledger citations resolve (R8), the
+   linter isn't pointed at an empty corpus (R10), verify scripts are wired (R11), slices
+   carry their required sections in their own prose — a heading quoted inside a code fence
+   is not compliance (R12/R13) — and citations and links resolve in the prose read as
+   *instruction* —
    `CLAUDE.md`, `README.md`, `docs/`, the slash commands (R14/R15,
    [ADR-0020](adr/0020-citations-are-checked-wherever-they-are-read.md)).
 2. **Legacy-aware (warning, not error).** Bare prose cross-references (R9) and slice-section

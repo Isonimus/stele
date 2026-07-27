@@ -43,6 +43,22 @@ const normId = (v) => String(v).trim().padStart(4, '0');
 
 const isId = (v) => /^\d{1,4}$/.test(String(v).trim());
 
+/**
+ * ISO 8601 `YYYY-MM-DD`, and a day that exists — `2026-02-31` parses but round-trips wrong.
+ *
+ * `date` is not decoration: R12/R13 pick their severity by string-comparing it against
+ * SLICE_SECTIONS_SINCE, so anything sorting above `2026-07-22` grades as current and
+ * anything below grades as legacy. Unvalidated, `date: sometime last tuesday` graded as
+ * *current* purely because 's' > '2', and a copy-pasted earlier date graded as legacy —
+ * shipping a slice with no Definition of Done on a green build. ADR-0002 already specifies
+ * ISO 8601; this is that specification made executable.
+ */
+function isCalendarDate(v) {
+  const text = String(v).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+  return new Date(`${text}T00:00:00Z`).toISOString().startsWith(text);
+}
+
 // Citations, bare or qualified (ADR-0009). A leading `<repo>:` says the decision lives in
 // another repo's corpus, which this linter cannot open and so must skip. The colon has to
 // be adjacent, leaving an ordinary sentence ending in a colon ("see also: ADR-0004")
@@ -191,11 +207,36 @@ function loadProse(root) {
 // This is the only place the linter reads body text structurally; ADR-0002 keeps
 // frontmatter the machine-readable surface, and a markdown heading is not frontmatter.
 
+/**
+ * Body lines with fenced code blocks blanked out, positions preserved.
+ *
+ * A `## Verification` inside a fence is a *quotation* of the rule, not compliance with it.
+ * Reproduced 2026-07-27: a slice whose only two required sections sat in a ```markdown
+ * sample — exactly what a document explaining the slice template contains — lints clean,
+ * which is a false green on the two rules that define "done".
+ */
+function withoutFences(body) {
+  const fence = /^\s*(```|~~~)/;
+  let open = null;
+  return (body ?? '').split('\n').map((line) => {
+    const marker = line.match(fence);
+    if (marker && open === null) {
+      open = marker[1];
+      return '';
+    }
+    if (marker && line.trim().startsWith(open)) {
+      open = null;
+      return '';
+    }
+    return open === null ? line : '';
+  });
+}
+
 /** The text under a `## Heading`, up to the next `#`/`##` heading or end of body.
  *  Returns null when the heading is absent — distinct from a present-but-empty section. */
 function sectionText(body, name) {
   const heading = new RegExp(`^##\\s+${name}\\s*$`, 'i');
-  const lines = (body ?? '').split('\n');
+  const lines = withoutFences(body);
   const start = lines.findIndex((l) => heading.test(l.trim()));
   if (start === -1) return null;
   const rest = lines.slice(start + 1);
@@ -260,6 +301,9 @@ const rules = {
           report('error', d.path, `R1 missing required field "${field}"`);
         }
       }
+      if (d.data.date !== undefined && !isCalendarDate(d.data.date)) {
+        report('error', d.path, `R1 date "${d.data.date}" is not a calendar date in YYYY-MM-DD form`);
+      }
     }
   },
 
@@ -319,6 +363,14 @@ const rules = {
     for (const [id, d] of byId) {
       const supersededBy = listOf(d, 'superseded_by');
       const supersedes = listOf(d, 'supersedes');
+
+      // R4 — a document cannot supersede itself. Self-reference satisfies every other
+      // check in this rule vacuously: the bidirectionality test finds the id in its own
+      // list, R6 sees a superseded status with a non-empty superseded_by, and R7 sees a
+      // target that is not "accepted". The whole graph agrees, about nothing.
+      if (supersedes.includes(id) || supersededBy.includes(id)) {
+        report('error', d.path, `R4 ADR ${id} supersedes itself — a decision is replaced by a later one, never by itself`);
+      }
 
       // R5 — dangling references. Legacy 0051 and 0061 claimed supersession with no
       // resolvable target at all.

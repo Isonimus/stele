@@ -46,7 +46,8 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   Opt-in by wiring into `package.json`; design settled, build outstanding — needs the export
   scanner and its regression fixtures (ADR-0013).
 - [deferred] Decide whether the adversarial pass earns a `## Adversarial review` required
-  section on slices (rule 14, the sibling of R12/R13). Deliberately not shipped with the ADR:
+  section on slices, a sibling of R12/R13 (R14 is now taken — ADR-0020). Deliberately not
+  shipped with the ADR:
   this repo's precedent is that a rule follows the incident, and the practice has zero runs
   behind it. Revisit after several triggered passes, citing what they found and what the
   finding-to-noise ratio actually was — if it earns a rule, that rule is its own ADR
@@ -55,14 +56,6 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   its vendored `.claude/commands/*.md` and `CLAUDE.md` — gamatar and boxel both. Nothing in
   those repos can detect it, so each needs `/init-method --update` and a re-read of its
   scaffolded `CLAUDE.md`, which `--update` does not overwrite (ADR-0020).
-- [bug] `date` is unvalidated but load-bearing: it picks R12/R13 severity by string compare
-  against `SLICE_SECTIONS_SINCE`. `date: sometime last tuesday` lints clean today only
-  because `'s' > '2'`. A new slice with copy-pasted frontmatter dated before the cutoff grades
-  as legacy and ships with no Definition of Done on a green build (ADR-0011).
-- [bug] An ADR may supersede itself: `supersedes: [0002]` + `superseded_by: [0002]` +
-  `status: superseded` lints clean. Two lines in the supersession rule (ADR-0003).
-- [bug] `sectionText` does not skip fenced code blocks, so a `## Verification` quoted inside a
-  code sample satisfies R12. Reasoned from the regex, not reproduced (ADR-0011).
 - [audit] 36 boxel ADRs carry dated `## Amendment` blocks. The `amended` status covers
   them, but whether an amendment should instead be a superseding ADR is unresolved
   (ADR-0002).

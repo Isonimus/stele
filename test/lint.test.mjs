@@ -40,6 +40,13 @@ test('R1 rejects frontmatter missing a required field', () => {
   assert.deepEqual(errors('r1-missing-field'), ['R1']);
 });
 
+test('R1 rejects a date that is not a real calendar date', () => {
+  // `date` picks R12/R13 severity by string compare against the cutoff, so an unvalidated
+  // one is a severity dial anyone can turn by accident: "sometime last tuesday" graded as
+  // current only because 's' sorts above '2' (ADR-0002).
+  assert.deepEqual(errors('r1-bad-date'), ['R1']);
+});
+
 test('R2 catches an id that disagrees with the filename ordinal', () => {
   assert.deepEqual(errors('r2-id-mismatch'), ['R2']);
 });
@@ -59,6 +66,13 @@ test('R4 catches a one-way supersession', () => {
   // The live boxel defect: 0112/0113/0114 declare themselves superseded by 0122,
   // and 0122 acknowledges none of them.
   assert.deepEqual(errors('r4-one-way'), ['R4']);
+});
+
+test('R4 refuses a document that supersedes itself', () => {
+  // Self-reference satisfies the rest of the graph vacuously — bidirectionality finds the
+  // id in its own list, R6 sees a superseded status backed by a non-empty superseded_by,
+  // R7 sees a target that is not "accepted" — so the corpus agreed, about nothing.
+  assert.deepEqual(errors('r4-self-supersede'), ['R4']);
 });
 
 test('R5 catches a supersession naming a target that does not exist', () => {
@@ -168,6 +182,13 @@ test('R13 errors when the Definition of Done is prose, not a Given/When/Then tri
   // Presence of the header is not enough: the section must hold a real scenario. Shape,
   // not truth — the check reads that the three step kinds exist, never what they claim.
   assert.deepEqual(errors('r13-slice-no-triad'), ['R13']);
+});
+
+test('R12/R13 do not accept a section quoted inside a fenced code block', () => {
+  // A slice that *documents* the template carries both headings in a ```markdown sample
+  // and neither in its own prose. Reading the fence as compliance is a false green on the
+  // two rules that define done, which is the failure this whole layer exists to prevent.
+  assert.deepEqual(errors('r12-fenced-sections'), ['R12', 'R13']);
 });
 
 test('R12/R13 only warn on a legacy slice dated before the rule', () => {
