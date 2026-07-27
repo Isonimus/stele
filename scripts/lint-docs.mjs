@@ -12,7 +12,7 @@
 
 import { readFileSync, readdirSync, existsSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { join, basename, dirname } from 'node:path';
+import { join, basename, dirname, relative } from 'node:path';
 
 const STATUSES = ['accepted', 'proposed', 'superseded', 'amended'];
 const TYPES = ['architecture', 'slice', 'batch'];
@@ -26,6 +26,27 @@ const DOC_DIRS = ['adr', 'slices'];
 // level deep; anything else here is a plain file path.
 const PROSE_FILES = ['CLAUDE.md', 'README.md'];
 const PROSE_DIRS = ['docs', '.claude/commands'];
+
+/**
+ * Every path this linter reads, relative to the repo root — the hook's archive list
+ * (ADR-0018) in machine-readable form.
+ *
+ * The hook materialises the staged tree and copies only what the checks read, so a rule
+ * reading outside this set runs against a file that was never extracted. That happened:
+ * rules 14 and 15 shipped reading four paths the hook did not copy, and were dead there
+ * for a release while passing in CI. `test/read-set.test.mjs` holds the two lists equal.
+ */
+export const READ_SCOPE = [
+  ...DOC_DIRS, 'LEDGER.md', ...PROSE_FILES, ...PROSE_DIRS, 'scripts', 'package.json',
+];
+
+/** Whether a root-relative path lies inside the checked scope. Outside it, the hook and a
+ *  working-tree run would disagree, and a check that depends on where it runs is worse
+ *  than no check. */
+function inReadScope(rootRelative) {
+  if (rootRelative.startsWith('..')) return false;
+  return READ_SCOPE.some((entry) => rootRelative === entry || rootRelative.startsWith(`${entry}/`));
+}
 
 // The date the required-slice-section rules (R12/R13) shipped (ADR-0004, ADR-0011). A
 // slice dated before this predates the rules and only warns; one dated on or after must
@@ -461,7 +482,9 @@ const rules = {
           }
         }
         for (const target of relativeLinks(line)) {
-          if (!existsSync(join(dirname(path), target))) {
+          const resolved = relative(root, join(dirname(path), target));
+          if (!inReadScope(resolved)) continue;
+          if (!existsSync(join(root, resolved))) {
             report('error', path, `R15 line ${i + 1} links to ${target}, which does not exist`);
           }
         }

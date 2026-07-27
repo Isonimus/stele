@@ -272,6 +272,28 @@ function frameworkInstalled({ target, report }) {
   else report('problem', hook, 'the pre-commit framework is configured but never installed — no hook runs at all, including its own. Run `pre-commit install`.');
 }
 
+/**
+ * Reports a corpus the freshly vendored linter calls red.
+ *
+ * `--apply` refuses to *install* a hook on a red corpus, because a hook that blocks every
+ * commit is the tool bricking the repo it protects. `--update` reaches the same state by
+ * the other door and had no equivalent guard: a release that adds an error-severity rule
+ * lands a stricter linter behind a hook that is already live, and the next commit fails
+ * with no hint that an update caused it.
+ *
+ * It reports rather than refuses. By the time the copy is written the old linter is gone,
+ * so there is nothing to decline into — and rolling back would leave the repo on machinery
+ * the operator explicitly asked to replace. Loud and accurate beats a silent half-update.
+ */
+function lintAfterUpdate({ target, report }) {
+  const errors = lintErrors(target);
+  if (errors.length === 0) {
+    return report('ok', target, 'corpus still clean under the updated linter');
+  }
+  for (const f of errors) report('problem', f.path, f.message);
+  report('problem', target, `${errors.length} lint error(s) under the updated linter — the hook is live, so every commit is blocked until these are fixed. \`git commit --no-verify\` is the escape hatch while you do.`);
+}
+
 function check({ target, toolkit, report }) {
   for (const [dest, src] of VENDORED) {
     const to = join(target, dest);
@@ -334,6 +356,7 @@ export function initMethod({ target, toolkit = TOOLKIT, mode = 'install', apply 
   } else if (mode === 'update') {
     vendor({ target, toolkit, apply, report });
     vendorCommands({ target, toolkit, apply, force: true, report });
+    if (apply) lintAfterUpdate({ target, report });
   } else {
     scaffold({ target, toolkit, apply, report });
     vendor({ target, toolkit, apply, report });

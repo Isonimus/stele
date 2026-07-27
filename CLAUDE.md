@@ -47,6 +47,12 @@ cannot: the generated index matches the corpus, and immutable bodies only ever g
 (`scripts/check-immutable.mjs`, ADR-0019).
 `/init-method` installs both into a target repo (ADR-0006) — and refuses to install the
 hook while the linter is red, because a hook on a red corpus blocks every commit.
+`--update` cannot refuse (the old linter is already gone) so it lints and reports instead.
+
+**A new rule reads only inside `READ_SCOPE`.** The hook copies exactly that list out of the
+staged tree, so a rule reading anywhere else finds nothing and reports green — which is how
+R14/R15 shipped dead in the hook for a release. `test/read-set.test.mjs` holds the linter's
+list and the hook's equal; extend both together or the suite fails (ADR-0021).
 
 A rule enforced by memory is a rule that holds until the first busy afternoon. Five
 supersession defects sat undetected in boxel for weeks because nothing ran. If a

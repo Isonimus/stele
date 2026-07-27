@@ -76,6 +76,11 @@ npx @isonimus/stele <repo-root> --check    # verify an install is intact
 npx @isonimus/stele <repo-root> --update   # re-sync vendored machinery
 ```
 
+`--update` lints the corpus once the new machinery is in place and reports anything the
+updated linter calls red. A release that adds a rule can turn a green repo red behind a
+hook that is already installed, and the failure otherwise shows up as an unexplained
+blocked commit some time later (ADR-0021).
+
 From a clone of this repo, the same entry point runs directly:
 
 ```
@@ -181,9 +186,13 @@ are graded by what can actually be mechanised
    linter isn't pointed at an empty corpus (R10), verify scripts are wired (R11), slices
    carry their required sections in their own prose — a heading quoted inside a code fence
    is not compliance (R12/R13) — and citations and links resolve in the prose read as
-   *instruction* —
-   `CLAUDE.md`, `README.md`, `docs/`, the slash commands (R14/R15,
+   *instruction*: `CLAUDE.md`, `README.md`, `docs/`, the slash commands (R14/R15,
    [ADR-0020](adr/0020-citations-are-checked-wherever-they-are-read.md)).
+
+   Every rule reads inside one declared scope, which is exactly what the hook copies out of
+   the staged tree — so a rule cannot pass in CI and do nothing in the hook, and a link
+   check cannot depend on where it ran
+   ([ADR-0021](adr/0021-the-checked-scope-is-one-list-and-no-rule-reads-outside-it.md)).
 2. **Legacy-aware (warning, not error).** Bare prose cross-references (R9) and slice-section
    rules on documents that predate them warn instead of failing, so a repo's history never
    blocks its next commit — while *new* work is held to the full bar.

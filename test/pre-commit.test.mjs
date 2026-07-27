@@ -154,6 +154,21 @@ test('the hook allows an appended amendment to a committed ADR', () => {
   assert.ok(result.ok, `an appended amendment is the sanctioned way to change one:\n${result.output}`);
 });
 
+test('the hook sees the prose files, not only the corpus', () => {
+  // The read-set defect (ADR-0018, ADR-0020): rules 14 and 15 read files the hook never
+  // archived, so they reported green on a commit `npm run lint` calls red. Asserted
+  // through a real commit, because the whole failure was a disagreement between where the
+  // linter ran and what it was handed.
+  const target = installedRepo();
+  writeFileSync(join(target, 'CLAUDE.md'), '# Conventions\n\nRouting is settled by ADR-0042.\n');
+  git(target, 'add', '-A');
+
+  const result = tryCommit(target, 'cites a decision that does not exist');
+
+  assert.equal(result.ok, false, 'a citation the linter rejects must not reach a commit');
+  assert.match(result.output, /R14/);
+});
+
 test('a commit that drops the vendored checker is refused, not silently unchecked', () => {
   const target = installedRepo();
   git(target, 'rm', '-q', '--cached', 'scripts/lint-docs.mjs');
