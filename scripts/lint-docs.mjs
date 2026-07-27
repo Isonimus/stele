@@ -10,13 +10,22 @@
 //
 // Exit 1 if any error-severity rule fails. Warnings never fail the build.
 
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { readFileSync, readdirSync, existsSync, realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { join, basename, dirname } from 'node:path';
 
 const STATUSES = ['accepted', 'proposed', 'superseded', 'amended'];
 const TYPES = ['architecture', 'slice', 'batch'];
 const REQUIRED = ['id', 'title', 'type', 'status', 'date'];
 const DOC_DIRS = ['adr', 'slices'];
+
+// Prose that is read as instruction rather than as a record (ADR-0020). `CLAUDE.md` is
+// loaded at the start of every session and the command files are the assistant's own
+// procedures, so a citation rotting in either misroutes work silently — the corpus itself
+// stays green because rules 8 and 9 never open these files. Directories are scanned one
+// level deep; anything else here is a plain file path.
+const PROSE_FILES = ['CLAUDE.md', 'README.md'];
+const PROSE_DIRS = ['docs', '.claude/commands'];
 
 // The date the required-slice-section rules (R12/R13) shipped (ADR-0004, ADR-0011). A
 // slice dated before this predates the rules and only warns; one dated on or after must
@@ -40,10 +49,48 @@ const isId = (v) => /^\d{1,4}$/.test(String(v).trim());
 // resolving locally as before.
 const CITATION = /(?:([A-Za-z][\w.-]*):)?ADR[-\s](\d{1,4})/g;
 
-/** Ids cited in `text` that this repo is expected to own — cross-repo refs skipped. */
-function* localCitations(text) {
+/**
+ * Ids cited in `text` that this repo is expected to own — cross-repo refs skipped.
+ *
+ * A qualifier naming *this* repo resolves locally (ADR-0020). Text that is vendored into
+ * other repos must qualify its citations, or a bare `ADR-0005` copied into gamatar reads
+ * as gamatar's ADR-0005; but qualifying it would also put it permanently beyond checking,
+ * since ADR-0009 skips every qualified reference. Recognising our own name is what keeps
+ * `stele:ADR-0005` verified in the one corpus that can verify it.
+ */
+function* localCitations(text, selfRepo = null) {
   for (const [, repo, id] of text.matchAll(CITATION)) {
-    if (repo === undefined) yield normId(id);
+    if (repo === undefined || (selfRepo !== null && repo === selfRepo)) yield normId(id);
+  }
+}
+
+/** This repo's own name for citation purposes: the unscoped half of package.json `name`.
+ *  Null when there is no readable name — rule 11 owns malformed package.json, and without
+ *  a name there is simply no self-qualifier to recognise. */
+function repoName(root) {
+  const path = join(root, 'package.json');
+  if (!existsSync(path)) return null;
+  let pkg;
+  try {
+    pkg = JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return null;
+  }
+  const name = typeof pkg.name === 'string' ? pkg.name : '';
+  const unscoped = name.startsWith('@') ? name.slice(name.indexOf('/') + 1) : name;
+  return unscoped === '' ? null : unscoped;
+}
+
+// Inline markdown links, with the optional title form `[x](path "title")`.
+const LINK = /\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)/g;
+
+/** Link targets in `line` that name a file in this repo. External URLs, mail links,
+ *  in-page anchors and absolute paths are all outside what a file check can decide. */
+function* relativeLinks(line) {
+  for (const [, target] of line.matchAll(LINK)) {
+    if (/^(?:[a-z][a-z0-9+.-]*:|\/\/|\/|#)/i.test(target)) continue;
+    const path = target.split('#')[0].split('?')[0];
+    if (path !== '') yield path;
   }
 }
 
@@ -125,6 +172,18 @@ export function loadDocs(root) {
     }
   }
   return docs;
+}
+
+/** The prose files present under `root`, as { path, text }. Missing ones are simply
+ *  absent — not every repo has docs/ or slash commands. */
+function loadProse(root) {
+  const paths = PROSE_FILES.map((f) => join(root, f));
+  for (const dir of PROSE_DIRS) {
+    const full = join(root, dir);
+    if (!existsSync(full)) continue;
+    paths.push(...readdirSync(full).sort().filter((f) => f.endsWith('.md')).map((f) => join(full, f)));
+  }
+  return paths.filter(existsSync).map((path) => ({ path, text: readFileSync(path, 'utf8') }));
 }
 
 // --- section helpers --------------------------------------------------------
@@ -315,13 +374,47 @@ const rules = {
     const ids = new Set(docs.filter((d) => d.ok && d.data.id !== undefined).map((d) => normId(d.data.id)));
 
     const text = readFileSync(path, 'utf8');
+    const self = repoName(root);
     text.split('\n').forEach((line, i) => {
-      for (const id of localCitations(line)) {
+      for (const id of localCitations(line, self)) {
         if (!ids.has(id)) {
           report('error', path, `R8 line ${i + 1} cites ADR ${id}, which does not exist. Another repo's decision is cited as \`<repo>:ADR-${id}\` (ADR-0009).`);
         }
       }
     });
+  },
+
+  // R14/R15 — the prose that is read as instruction (ADR-0020). Rules 8 and 9 open
+  // `LEDGER.md` and the corpus and nothing else, so `CLAUDE.md`, `README.md`, `docs/` and
+  // the slash commands were never checked at all. That is not hypothetical: gamatar's
+  // vendored `/remember` said "the exact failure ADR-0005 exists to prevent", and
+  // gamatar's ADR-0005 is a superseded decision about canvas face textures.
+  //
+  // Error, not a warning like R9: measured across boxel's prose (43 bare references) and
+  // gamatar's, every reference that is meant to be local resolves, so the severity that
+  // forced R9 to warn — legacy volume — is absent here.
+  //
+  // The two run together because they share the file set. R15 checks relative link
+  // targets, and only here: a broken link inside an immutable document cannot be fixed
+  // without the rewrite ADR-0019 forbids, so it is not something to fail a build on.
+  prose(docs, root, report) {
+    const ids = new Set(docs.filter((d) => d.ok && d.data.id !== undefined).map((d) => normId(d.data.id)));
+    const self = repoName(root);
+
+    for (const { path, text } of loadProse(root)) {
+      text.split('\n').forEach((line, i) => {
+        for (const id of localCitations(line, self)) {
+          if (!ids.has(id)) {
+            report('error', path, `R14 line ${i + 1} cites ADR ${id}, which does not exist. Another repo's decision is cited as \`<repo>:ADR-${id}\` (ADR-0009).`);
+          }
+        }
+        for (const target of relativeLinks(line)) {
+          if (!existsSync(join(dirname(path), target))) {
+            report('error', path, `R15 line ${i + 1} links to ${target}, which does not exist`);
+          }
+        }
+      });
+    }
   },
 
   // R11 — every verify script is wired into package.json (ADR-0004). The harness's
@@ -400,12 +493,13 @@ const rules = {
   // Since ADR-0009 a bare reference means unambiguously "in this repo" — the other-repo
   // case has its own syntax — so the remaining obstacle to erroring here is boxel's
   // legacy volume alone, not the mechanism.
-  proseRefs(docs, _root, report) {
+  proseRefs(docs, root, report) {
     const ids = new Set(docs.filter((d) => d.ok && d.data.id !== undefined).map((d) => normId(d.data.id)));
+    const self = repoName(root);
     for (const d of docs) {
       if (!d.ok || !d.body) continue;
       const unresolved = new Set();
-      for (const id of localCitations(d.body)) {
+      for (const id of localCitations(d.body, self)) {
         if (!ids.has(id)) unresolved.add(id);
       }
       for (const ref of [...unresolved].sort()) {
@@ -458,6 +552,8 @@ function main(argv) {
   return errors > 0 ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// realpath, not a string compare on argv[1]: invoked through a bin symlink the naive form
+// silently does nothing, which is how `npx stele` shipped as a no-op (ADR-0015).
+if (realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   process.exit(main(process.argv.slice(2)));
 }

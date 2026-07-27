@@ -34,7 +34,14 @@ most valuable thing this workflow produces, and an in-place edit destroys it.
 
 ## 2. Enforcement — invariants are executable (ADR-0003)
 
-`node scripts/lint-docs.mjs` checks eleven rules and runs from a pre-commit hook and CI. The
+A citation is bare (`ADR-NNNN`) only when it means *this* repo, and qualified
+(`<repo>:ADR-NNNN`) otherwise (ADR-0009). Anything vendored out — `templates/`,
+`.claude/commands/` — must qualify even our own decisions, or the copy names the target
+repo's decision of that number; write `stele:ADR-NNNN` there, which the linter still
+resolves here (ADR-0020). An illustrative number in vendored text is a citation to the
+linter, so examples use the `NNNN` placeholder.
+
+`node scripts/lint-docs.mjs` checks fifteen rules and runs from a pre-commit hook and CI. The
 hook checks the **commit**, not the working tree (ADR-0018), and runs two checks the linter
 cannot: the generated index matches the corpus, and immutable bodies only ever gained lines
 (`scripts/check-immutable.mjs`, ADR-0019).

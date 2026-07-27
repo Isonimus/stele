@@ -146,6 +146,16 @@ error**, and writes artifacts (screenshots, numbers) for human review. Name it i
 `## Verification` and **wire it into `package.json`** — an unwired verify script runs once and
 is dead thereafter, so the linter fails if any is unwired (R11). ([ADR-0004](adr/0004-verification-harness-and-in-repo-invariants.md))
 
+**Cite a decision.** Write `ADR-NNNN` for one in *this* repo and `<repo>:ADR-NNNN` for one
+in another — a bare citation always means "here", which is what lets the linter treat a
+citation that doesn't resolve as a real defect rather than a maybe
+([ADR-0009](adr/0009-cross-repo-citations-are-qualified.md)). Text you expect to be copied
+into another repo — a template, a slash command — must use the qualified form even for your
+own decisions, or the copy silently names the *other* repo's decision of that number. Naming
+your own repo costs nothing: the linter resolves `<this-repo>:ADR-NNNN` locally, so those
+citations stay checked here and stay skipped downstream
+([ADR-0020](adr/0020-citations-are-checked-wherever-they-are-read.md)).
+
 **Adopt into an existing repo.** `/init-method <repo> --apply`. Migrate the corpus and hand-
 fix any red supersession pairs *before* the hook goes on. Legacy documents that predate a
 rule warn rather than error, so adoption is never blocked by history.
@@ -168,8 +178,10 @@ are graded by what can actually be mechanised
 1. **Machine-checked (error — blocks the commit).** Frontmatter shape and completeness
    (R1), id/filename agreement and uniqueness (R2), closed status/type vocabulary (R3), the
    supersession graph (R4–R7), ledger citations resolve (R8), the linter isn't pointed at an
-   empty corpus (R10), verify scripts are wired (R11), and slices carry their required
-   sections (R12/R13).
+   empty corpus (R10), verify scripts are wired (R11), slices carry their required sections
+   (R12/R13), and citations and links resolve in the prose that is read as *instruction* —
+   `CLAUDE.md`, `README.md`, `docs/`, the slash commands (R14/R15,
+   [ADR-0020](adr/0020-citations-are-checked-wherever-they-are-read.md)).
 2. **Legacy-aware (warning, not error).** Bare prose cross-references (R9) and slice-section
    rules on documents that predate them warn instead of failing, so a repo's history never
    blocks its next commit — while *new* work is held to the full bar.

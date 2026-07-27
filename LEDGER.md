@@ -51,11 +51,10 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   behind it. Revisit after several triggered passes, citing what they found and what the
   finding-to-noise ratio actually was — if it earns a rule, that rule is its own ADR
   (ADR-0017).
-- [bug] Citations resolve only in `LEDGER.md` (R8) and doc bodies (R9). The ~40 `ADR-NNNN`
-  references in `CLAUDE.md`, `README.md`, `templates/CLAUDE.md` and `.claude/commands/*.md`,
-  and the README's `](adr/….md)` path links, are unchecked. All resolve today — this is
-  prevention. `CLAUDE.md` is read at the start of every session, so a citation rotting there
-  routes every future session to a decision that does not exist (ADR-0009).
+- [bug] Every repo already running an install carries the twenty misrouted bare citations in
+  its vendored `.claude/commands/*.md` and `CLAUDE.md` — gamatar and boxel both. Nothing in
+  those repos can detect it, so each needs `/init-method --update` and a re-read of its
+  scaffolded `CLAUDE.md`, which `--update` does not overwrite (ADR-0020).
 - [bug] `date` is unvalidated but load-bearing: it picks R12/R13 severity by string compare
   against `SLICE_SECTIONS_SINCE`. `date: sometime last tuesday` lints clean today only
   because `'s' > '2'`. A new slice with copy-pasted frontmatter dated before the cutoff grades

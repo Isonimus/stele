@@ -87,6 +87,28 @@ test('R9 warns on an unresolved prose reference but never errors', () => {
   assert.deepEqual(warnings('r9-prose-ref'), ['R9']);
 });
 
+test('R14 errors on a citation that does not resolve in prose read as instruction', () => {
+  // Error where R9 warns, on measured grounds: every reference meant to be local in
+  // boxel's prose (43) and gamatar's resolves, so the legacy volume that forced R9 to
+  // warn is absent here. CLAUDE.md is loaded at the start of every session, so a rotted
+  // citation there misroutes work rather than merely reading wrong (ADR-0020).
+  assert.deepEqual(errors('r14-bad-prose-ref'), ['R14']);
+  assert.deepEqual(warnings('r14-bad-prose-ref'), []);
+});
+
+test('R14 resolves a citation qualified with this repo\'s own name, and skips other repos', () => {
+  // Vendored text must qualify its citations or a bare ADR-0005 copied into gamatar
+  // names gamatar's ADR-0005. Recognising our own name keeps those references checked
+  // in the one corpus that can check them, instead of exempt everywhere (ADR-0020).
+  assert.deepEqual(errors('r14-self-qualified'), ['R14']);
+});
+
+test('R15 catches a relative link with no file behind it', () => {
+  // URLs and in-page anchors are outside what a file check can decide, so the fixture
+  // carries one of each alongside the broken link and expects a single finding.
+  assert.deepEqual(errors('r15-broken-link'), ['R15']);
+});
+
 test('R10 errors when the root holds no document directory at all', () => {
   // The reported defect: pointed at boxel/adr rather than the repo root, the linter
   // printed "0 document(s) — ok" and exited 0. A hook on a wrong path passed forever.

@@ -3,7 +3,7 @@ description: Install the method kit (CLAUDE.md, LEDGER.md, linter, index, pre-co
 argument-hint: [repo-root] [--check | --update]
 ---
 
-Install this kit into a repo, or verify an existing install (ADR-0006). The script does
+Install this kit into a repo, or verify an existing install (stele:ADR-0006). The script does
 the mechanical half; you do the two halves that need judgement — filling the scaffolded
 `CLAUDE.md`, and wiring verify scripts.
 
@@ -36,7 +36,7 @@ This scaffolds `adr/`, `CLAUDE.md` and `LEDGER.md` (never overwriting), vendors
 `adr/INDEX.md`, links `~/.claude/CLAUDE.md`, and installs the pre-commit hook **only if
 the corpus lints clean**.
 
-The commands are vendored under softer rules than the machinery (ADR-0007): a repo may
+The commands are vendored under softer rules than the machinery (stele:ADR-0007): a repo may
 edit its own copy of `/slice` or `/wrap-up` to say something repo-specific, and an
 install keeps that edit rather than overwriting it. If you edit one, say so — an edit
 made in an installed repo does not travel back to the toolkit.
@@ -44,7 +44,7 @@ made in an installed repo does not travel back to the toolkit.
 ## 3. If the repo already has a hook framework
 
 A target with a `.pre-commit-config.yaml` gets the doc checks **composed into it** as a
-`repo: local` block rather than a symlink (ADR-0008) — the framework owns
+`repo: local` block rather than a symlink (stele:ADR-0008) — the framework owns
 `.git/hooks/pre-commit`, and a symlink there is silently erased by the next
 `pre-commit install`. The append is idempotent and additive; the existing config is
 never reordered or rewritten, and `--update` leaves it alone.
@@ -101,5 +101,5 @@ asking; that is somebody's deliberate edit.
 
 `--update` re-copies the vendored scripts, the hook and the commands — for a command it
 discards a local edit, which is exactly what it is for. It is the only way a toolkit fix
-reaches an installed repo: the copies are deliberate (ADR-0006, ADR-0007), and drift is
+reaches an installed repo: the copies are deliberate (stele:ADR-0006, stele:ADR-0007), and drift is
 the price.

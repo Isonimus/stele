@@ -52,6 +52,12 @@ in this repo, that decision is a new or superseding ADR.
 (stele:ADR-0018); alongside the linter it verifies that `adr/INDEX.md` matches the corpus and
 that immutable bodies have only gained lines (stele:ADR-0019).
 
+A citation is bare (`ADR-NNNN`) only when it means *this* repo, and qualified
+(`<repo>:ADR-NNNN`) otherwise (stele:ADR-0009). The linter resolves citations in `LEDGER.md`,
+in the corpus, and in the prose that is read as instruction — this file, `README.md`,
+`docs/`, `.claude/commands/` — so a citation that rots there fails the build rather than
+quietly misrouting the next session (stele:ADR-0020).
+
 A rule enforced by memory is a rule that holds until the first busy afternoon. If a
 convention matters, it gets a rule; if it genuinely can't be checked, say so out loud
 rather than writing it down and trusting it.
@@ -84,7 +90,7 @@ are exempt: a probe answers its question once and the number lands in an ADR.
 
 Every slice carries two required sections, both rule-checked: `## Verification` names the
 proof (R12), and `## Definition of Done` states the acceptance criteria as Given/When/Then
-scenarios written before the code (R13, ADR-0011). Each scenario names its proof in
+scenarios written before the code (R13, stele:ADR-0011). Each scenario names its proof in
 `## Verification`; the linter checks the sections exist and that the Definition of Done
 holds a full triad — it cannot check that a scenario is *right*, which is what `/wrap-up`
 is for.

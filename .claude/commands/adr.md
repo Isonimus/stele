@@ -5,7 +5,7 @@ argument-hint: <short title of the decision>
 
 Create a new ADR recording a decision that later work must obey — a mechanism, data
 format, or boundary. An ADR asserts *"on date X we chose Y because Z"*: a historical
-claim that stays true forever (ADR-0001). If you are recording a **feature work-unit**
+claim that stays true forever (stele:ADR-0001). If you are recording a **feature work-unit**
 rather than a durable decision, use `/slice` instead.
 
 Steps:
@@ -14,7 +14,7 @@ Steps:
    digits. Do not reuse or renumber.
 2. Choose the `type`: `architecture` for a durable decision, `slice` for a feature unit,
    `batch` only if it genuinely bundles several unrelated decisions that cannot map 1:1.
-3. Write `adr/NNNN-<kebab-title>.md` opening with the ADR-0002 frontmatter block:
+3. Write `adr/NNNN-<kebab-title>.md` opening with the stele:ADR-0002 frontmatter block:
 
    ```
    ---

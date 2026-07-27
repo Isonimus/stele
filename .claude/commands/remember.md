@@ -3,7 +3,7 @@ description: Route a fact to the destination that governs it — repo CLAUDE.md,
 argument-hint: <the thing to remember>
 ---
 
-Record a durable fact. **This is a router, not a store** (ADR-0005). Your job is to decide
+Record a durable fact. **This is a router, not a store** (stele:ADR-0005). Your job is to decide
 *what the fact governs* and write it where that is enforceable — not to write it wherever
 the operator's phrasing points.
 
@@ -29,7 +29,7 @@ Two tests resolve most cases:
   zod for validation" is a fact. "Migrate the remaining validators to zod" is a task.
 
 Memory is the **residual**, not the default. If you are about to write a rule that
-constrains code into memory, you have misrouted — that is the exact failure ADR-0005
+constrains code into memory, you have misrouted — that is the exact failure stele:ADR-0005
 records, which cost an amend and force-push after the same rule was independently rewritten
 into 12 files across 8 projects.
 
@@ -38,7 +38,7 @@ into 12 files across 8 projects.
 - **Repo `CLAUDE.md`** — add to the section it belongs to. If it is a standing invariant,
   add a row to the §5 invariants table citing the ADR that created it. If this repo has no
   `CLAUDE.md`, scaffold one from `templates/CLAUDE.md` first; without it there is no
-  destination and the fact will silently fall back to memory (ADR-0005).
+  destination and the fact will silently fall back to memory (stele:ADR-0005).
 - **Global `CLAUDE.md`** — edit your global `~/.claude/CLAUDE.md`, wherever your global
   conventions live. Keep it dense: it loads into every session in every repo.
 - **`LEDGER.md`** — one line, `- [type] description (ADR-NNNN)`, citing the source ADR if
@@ -54,7 +54,7 @@ instead of adding a duplicate.
 State which destination it went to and why in one line — e.g. *"→ repo `CLAUDE.md` §3: it
 constrains code, so it needs to be greppable and reviewable."*
 
-This step is not optional. Routing cannot be linted (ADR-0005), so saying the decision out
+This step is not optional. Routing cannot be linted (stele:ADR-0005), so saying the decision out
 loud is the only thing that makes a misroute correctable in the moment rather than
 discoverable in a survey weeks later.
 

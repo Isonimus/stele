@@ -4,7 +4,7 @@ description: End-of-task gate — run the checks and ask the four questions that
 
 Run before finishing a task. The point is to make mechanical what memory keeps dropping:
 the linter catches structural drift, and four questions catch the follow-ups that never
-get recorded until they have gone stale (ADR-0003).
+get recorded until they have gone stale (stele:ADR-0003).
 
 1. Run the linter and the index check:
    - `npm run lint` — must be green (rule 9 warnings are acceptable on a legacy corpus).
@@ -12,7 +12,7 @@ get recorded until they have gone stale (ADR-0003).
      generated index is drift by another name.
    - `npm test` — the test suite must pass; docs changes must not disturb code.
 
-2. **Adversarial pass** (ADR-0017) — run it if this change touched a `CLAUDE.md` §4
+2. **Adversarial pass** (stele:ADR-0017) — run it if this change touched a `CLAUDE.md` §4
    standing invariant, an exported/public API, a data format or anything persisted, or a
    Definition of Done scenario the slice flagged as risky. Otherwise skip it and say so.
 
@@ -32,7 +32,7 @@ get recorded until they have gone stale (ADR-0003).
    - Route what survives through the four questions below — fix, `LEDGER.md`, `/adr`, or
      `/slice`. **And record the rejections**: a finding you correctly dismissed will be
      raised again by every future fresh reader until the reason is written at the site
-     (ADR-0012) or in the §4 table. That is what makes the next pass cheaper than this one.
+     (stele:ADR-0012) or in the §4 table. That is what makes the next pass cheaper than this one.
 
 3. Then answer these four out loud, and act on each:
    - **Did this change a user- or dev-facing API or feature?** If so, update `README.md`
@@ -45,7 +45,7 @@ get recorded until they have gone stale (ADR-0003).
      deferrals live; a TODO in code or a note in your head is not tracked.
    - **Did this write code a later operator would plausibly try to "fix"?** — a deliberate
      deviation, a non-obvious constraint, a hard-won exception. If so, cite the governing
-     ADR at that site in a comment (ADR-0012), so the choice announces it is on purpose
+     ADR at that site in a comment (stele:ADR-0012), so the choice announces it is on purpose
      where the edit happens, not only in the §4 table nobody thinks to open.
 
 4. Report what you found and did for each of the four, so the operator can confirm
