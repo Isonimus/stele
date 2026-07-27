@@ -12,6 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # check-immutable compares two revisions, so the base must be in the clone
+          # (ADR-0019). The default depth-1 checkout has no history to compare against.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -19,5 +23,19 @@ jobs:
       - run: node scripts/lint-docs.mjs .
       # The generated index must match the corpus — a stale INDEX.md fails here.
       - run: node scripts/build-index.mjs --check .
+      # Immutable documents may only grow (ADR-0019). This is the backstop for the one
+      # check a --no-verify commit is most tempting to dodge.
+      - name: immutable documents only grow
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # A new branch reports an all-zero "before" and has no comparable base. Say so
+          # rather than passing quietly — a skipped check that looks green is the failure
+          # this project exists to prevent (ADR-0019).
+          if [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            node scripts/check-immutable.mjs "$BASE" HEAD
+          else
+            echo "::notice::no comparable base ref ($BASE) — immutability unchecked for this push"
+          fi
       # The invariant checks are themselves tested.
       - run: node --test test/*.test.mjs

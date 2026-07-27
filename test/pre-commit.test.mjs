@@ -130,6 +130,30 @@ test('the hook leaves unstaged work untouched', () => {
   assert.equal(git(target, 'stash', 'list').trim(), '', 'no stash may be left behind');
 });
 
+test('the hook refuses a commit that rewrites a committed ADR body', () => {
+  const target = installedRepo();
+  const path = join(target, 'adr', '0001-decision-0001.md');
+  writeFileSync(path, adr('0001').replace('## Consequences', '## What we now claim we decided'));
+  git(target, 'add', '-A');
+
+  const result = tryCommit(target, 'rewrites an immutable body');
+
+  assert.equal(result.ok, false, 'immutability must be enforced by the hook, not by memory');
+  assert.match(result.output, /IMMUTABLE/);
+  assert.match(result.output, /0001-decision-0001\.md/);
+});
+
+test('the hook allows an appended amendment to a committed ADR', () => {
+  const target = installedRepo();
+  const path = join(target, 'adr', '0001-decision-0001.md');
+  writeFileSync(path, `${adr('0001')}\n## Amendment — 2026-07-27: narrower than we thought\n\nDetails.\n`);
+  git(target, 'add', '-A');
+
+  const result = tryCommit(target, 'amends an ADR by appending');
+
+  assert.ok(result.ok, `an appended amendment is the sanctioned way to change one:\n${result.output}`);
+});
+
 test('a commit that drops the vendored checker is refused, not silently unchecked', () => {
   const target = installedRepo();
   git(target, 'rm', '-q', '--cached', 'scripts/lint-docs.mjs');

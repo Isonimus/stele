@@ -36,13 +36,21 @@ Changing our minds means writing a **new** ADR that supersedes the old one, neve
 it. The superseding note must say *why the old reasoning was wrong* — that record is the
 most valuable thing this workflow produces, and an in-place edit destroys it.
 
+A committed document's body may **gain** lines — an appended `## Amendment — <date>: …`, or a
+correction marker placed at the claim it corrects — and may never lose or rewrite one. The
+hook enforces this (stele:ADR-0019); frontmatter is exempt, because status and supersession
+fields are how a record announces it was superseded.
+
 This is also how a justified rule-violation gets recorded. `~/.claude/CLAUDE.md` §2 says a
 justified violation is written down as a decision rather than taken as a silent exception;
 in this repo, that decision is a new or superseding ADR.
 
 ## 2. Enforcement — invariants are executable
 
-`node scripts/lint-docs.mjs` runs from a pre-commit hook and in CI.
+`node scripts/lint-docs.mjs` runs from a pre-commit hook and in CI. The hook checks the
+**commit**, not the working tree, so a fix you forgot to stage cannot green a red commit
+(stele:ADR-0018); alongside the linter it verifies that `adr/INDEX.md` matches the corpus and
+that immutable bodies have only gained lines (stele:ADR-0019).
 
 A rule enforced by memory is a rule that holds until the first busy afternoon. If a
 convention matters, it gets a rule; if it genuinely can't be checked, say so out loud

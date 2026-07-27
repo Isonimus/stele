@@ -51,12 +51,6 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   behind it. Revisit after several triggered passes, citing what they found and what the
   finding-to-noise ratio actually was — if it earns a rule, that rule is its own ADR
   (ADR-0017).
-- [feature] ADR body immutability is enforced by nothing. Reproduced: rewrote the body of a
-  committed ADR to say the opposite of its decision, hook green. Not an R-rule — `lint(root)`
-  is a pure function over one directory and must stay one — so it is a sibling of
-  `build-index --check`, diffing staged `adr|slices/*.md` against `HEAD:<path>` below the
-  closing `---`. Needs a decided escape hatch for genuine typo fixes, which makes it an ADR
-  (ADR-0010).
 - [bug] Citations resolve only in `LEDGER.md` (R8) and doc bodies (R9). The ~40 `ADR-NNNN`
   references in `CLAUDE.md`, `README.md`, `templates/CLAUDE.md` and `.claude/commands/*.md`,
   and the README's `](adr/….md)` path links, are unchecked. All resolve today — this is

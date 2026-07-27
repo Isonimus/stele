@@ -55,6 +55,12 @@ means deleting its line from the ledger.** Changing your mind means a **new** AD
 supersedes the old one and says *why the old reasoning was wrong* — that record is the most
 valuable thing this workflow produces, and an in-place edit destroys it.
 
+This one is enforced, not merely stated: a committed immutable document's body may **gain**
+lines — an appended `## Amendment`, a correction marker placed at the claim it corrects — and
+may never lose or rewrite one
+([ADR-0019](adr/0019-immutable-bodies-may-gain-lines-never-lose-them.md)). Frontmatter stays
+free to change, because status and supersession are how a record announces it was superseded.
+
 ---
 
 ## Quickstart
@@ -103,9 +109,10 @@ Run in Claude Code as `/<name>`.
 Under the hood, the npm scripts are the enforcement surface:
 
 ```
-npm run lint     # node scripts/lint-docs.mjs .   — the invariant checker
-npm run index    # regenerate adr/INDEX.md
-npm test         # the regression suite (every rule has a fixture)
+npm run lint       # node scripts/lint-docs.mjs .   — the invariant checker
+npm run index      # regenerate adr/INDEX.md
+npm run immutable  # immutable bodies only gained lines since HEAD
+npm test           # the regression suite (every rule has a fixture)
 ```
 
 ---

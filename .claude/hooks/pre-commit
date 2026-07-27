@@ -53,7 +53,7 @@ fi
 # The commit's own checkers, not the working tree's (ADR-0018) — grading a commit with a
 # linter it does not contain is the same defect one turn removed. No fallback to the
 # working copy: a silent fallback is the thing this hook exists to remove.
-for checker in lint-docs.mjs build-index.mjs; do
+for checker in lint-docs.mjs build-index.mjs check-immutable.mjs; do
   if [ ! -f "$staged/scripts/$checker" ]; then
     echo "pre-commit: scripts/$checker is not in the commit — cannot check it against itself." >&2
     echo "            Stage the vendored checker, or run /init-method --update." >&2
@@ -67,3 +67,9 @@ node "$staged/scripts/lint-docs.mjs" "$staged"
 # 2. The generated index must match the corpus. A stale INDEX.md is drift by another name;
 #    regenerate and stage it rather than letting it fall behind.
 node "$staged/scripts/build-index.mjs" --check "$staged"
+
+# 3. Immutable documents may only grow (ADR-0019). Skipped on an unborn branch, where the
+#    first commit has nothing to have edited.
+if git rev-parse --verify --quiet HEAD >/dev/null; then
+  node "$staged/scripts/check-immutable.mjs" HEAD "$tree"
+fi

@@ -34,7 +34,10 @@ most valuable thing this workflow produces, and an in-place edit destroys it.
 
 ## 2. Enforcement — invariants are executable (ADR-0003)
 
-`node scripts/lint-docs.mjs` checks eleven rules and runs from a pre-commit hook and CI.
+`node scripts/lint-docs.mjs` checks eleven rules and runs from a pre-commit hook and CI. The
+hook checks the **commit**, not the working tree (ADR-0018), and runs two checks the linter
+cannot: the generated index matches the corpus, and immutable bodies only ever gained lines
+(`scripts/check-immutable.mjs`, ADR-0019).
 `/init-method` installs both into a target repo (ADR-0006) — and refuses to install the
 hook while the linter is red, because a hook on a red corpus blocks every commit.
 

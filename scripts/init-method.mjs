@@ -28,6 +28,7 @@ const TOOLKIT = dirname(dirname(fileURLToPath(import.meta.url)));
 const VENDORED = [
   ['scripts/lint-docs.mjs', 'scripts/lint-docs.mjs'],
   ['scripts/build-index.mjs', 'scripts/build-index.mjs'],
+  ['scripts/check-immutable.mjs', 'scripts/check-immutable.mjs'],
   ['.claude/hooks/pre-commit', '.claude/hooks/pre-commit'],
 ];
 
@@ -85,6 +86,12 @@ const FRAMEWORK_BLOCK = `
       - id: stele-index
         name: adr/INDEX.md matches the corpus
         entry: node scripts/build-index.mjs --check .
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: stele-immutable
+        name: immutable documents only grow
+        entry: node scripts/check-immutable.mjs
         language: system
         pass_filenames: false
         always_run: true
