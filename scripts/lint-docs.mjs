@@ -77,7 +77,13 @@ const isId = (v) => /^\d{1,4}$/.test(String(v).trim());
 function isCalendarDate(v) {
   const text = String(v).trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
-  return new Date(`${text}T00:00:00Z`).toISOString().startsWith(text);
+  // `2026-02-30` parses and normalises to March, so the round-trip catches it. `2026-00-01`
+  // does not parse at all, and `toISOString()` on an invalid Date throws — checked first,
+  // because a linter that dies with a stack trace on a malformed date reports nothing about
+  // the other documents and breaks `--update`'s report (ADR-0021).
+  const parsed = new Date(`${text}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  return parsed.toISOString().startsWith(text);
 }
 
 // Citations, bare or qualified (ADR-0009). A leading `<repo>:` says the decision lives in
@@ -85,6 +91,19 @@ function isCalendarDate(v) {
 // be adjacent, leaving an ordinary sentence ending in a colon ("see also: ADR-0004")
 // resolving locally as before.
 const CITATION = /(?:([A-Za-z][\w.-]*):)?ADR[-\s](\d{1,4})/g;
+
+/**
+ * `text` with link destinations and URLs removed, so only prose is scanned for citations.
+ *
+ * A URL path can contain an `ADR-1234`-shaped run that cites nothing —
+ * `https://example.com/docs/ADR-9999`, or a ticket link. Rules 8 and 14 are error severity,
+ * so one coincidence blocks a correct commit, and the advice their message gives is
+ * unusable: the `<repo>:` qualifier cannot be written inside a URL. Link *text* is kept,
+ * because `[ADR-0020](adr/0020-….md)` is a citation and rule 15 checks the target
+ * separately.
+ */
+const citableText = (text) =>
+  text.replace(/\]\([^)]*\)/g, ']()').replace(/\S*:\/\/\S*/g, '');
 
 /**
  * Ids cited in `text` that this repo is expected to own — cross-repo refs skipped.
@@ -96,7 +115,7 @@ const CITATION = /(?:([A-Za-z][\w.-]*):)?ADR[-\s](\d{1,4})/g;
  * `stele:ADR-0005` verified in the one corpus that can verify it.
  */
 function* localCitations(text, selfRepo = null) {
-  for (const [, repo, id] of text.matchAll(CITATION)) {
+  for (const [, repo, id] of citableText(text).matchAll(CITATION)) {
     if (repo === undefined || (selfRepo !== null && repo === selfRepo)) yield normId(id);
   }
 }

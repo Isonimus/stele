@@ -47,6 +47,14 @@ test('R1 rejects a date that is not a real calendar date', () => {
   assert.deepEqual(errors('r1-bad-date'), ['R1']);
 });
 
+test('R1 rejects a date whose components cannot form a day, without crashing', () => {
+  // `2026-02-30` normalises to March and fails the round-trip; `2026-00-01` does not parse
+  // at all, and `toISOString()` on an invalid Date throws. The linter died with a stack
+  // trace, reported nothing about any other document, and broke `--update`'s report
+  // (ADR-0021). Found by the adversarial pass (ADR-0017).
+  assert.deepEqual(errors('r1-impossible-date'), ['R1']);
+});
+
 test('R2 catches an id that disagrees with the filename ordinal', () => {
   assert.deepEqual(errors('r2-id-mismatch'), ['R2']);
 });
@@ -115,6 +123,16 @@ test('R14 resolves a citation qualified with this repo\'s own name, and skips ot
   // names gamatar's ADR-0005. Recognising our own name keeps those references checked
   // in the one corpus that can check them, instead of exempt everywhere (ADR-0020).
   assert.deepEqual(errors('r14-self-qualified'), ['R14']);
+});
+
+test('R8/R14 do not read an ordinal inside a URL as a citation', () => {
+  // `https://example.com/standards/ADR-9999` cites nothing, and both rules are error
+  // severity, so one coincidence blocked a correct commit — with advice that cannot be
+  // followed, since `<repo>:ADR-9999` is not writable inside a URL. The fixture keeps a
+  // resolving citation in link *text* so the narrowing cannot have gone too far. Found by
+  // the adversarial pass (ADR-0017).
+  assert.deepEqual(errors('r14-url-not-a-citation'), []);
+  assert.deepEqual(warnings('r14-url-not-a-citation'), []);
 });
 
 test('R15 catches a relative link with no file behind it', () => {

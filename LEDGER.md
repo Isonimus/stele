@@ -52,6 +52,12 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   behind it. Revisit after several triggered passes, citing what they found and what the
   finding-to-noise ratio actually was — if it earns a rule, that rule is its own ADR
   (ADR-0017).
+  **Run 1 (2026-07-27, `a165fa1~1..75d36ae`, Sonnet 5):** 2 findings, both reproduced, both
+  fixed — an unhandled `RangeError` that killed the linter on `date: 2026-00-01`, and R8/R14
+  reading an ordinal inside a URL as a citation, which blocked a correct commit with advice
+  that cannot be followed. Zero rejected, so no code-site rejection notes were needed. Both
+  sat in machinery the author had just audited by hand and published. One run, so no ratio
+  yet; two more before deciding.
 - [bug] Every repo already running an install carries the twenty misrouted bare citations in
   its vendored `.claude/commands/*.md` and `CLAUDE.md` — gamatar and boxel both. Nothing in
   those repos can detect it, so each needs `/init-method --update` and a re-read of its
