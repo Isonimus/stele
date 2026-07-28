@@ -9,6 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync, lstatSync, readlinkSync, readFileSync, appendFileSync, readdirSync, symlinkSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -175,18 +176,115 @@ test('a repo edit to a command survives --apply and is reported, not counted aga
   assert.deepEqual(statuses(actions, 'commands/slice.md'), ['local']);
 });
 
-test('--update takes the toolkit version of an adapted command back', () => {
+// ADR-0023. `--update` used to overwrite every command whose bytes differed, which made
+// taking a machinery fix and keeping a local adaptation mutually exclusive — the incident
+// in `pull_request`, whose correct `/adr` fix an update would have silently reverted.
+const COMMANDS = '.claude/commands';
+const PROVENANCE = join('.claude', '.stele-vendored.json');
+const toolkitCommand = (name) => readFileSync(join(TOOLKIT, COMMANDS, name), 'utf8');
+const adapt = (target, name, text) => writeFileSync(join(target, COMMANDS, name), text);
+const installed = (target, name) => readFileSync(join(target, COMMANDS, name), 'utf8');
+const sha256 = (text) => createHash('sha256').update(text).digest('hex');
+
+/**
+ * Rewinds a command to an older release *and* says the toolkit handed that older text over
+ * — the on-disk shape of "this repo is behind and has not touched the file". Editing the
+ * file alone would produce an adaptation, which is the state this one has to be told from.
+ */
+function rewind(target, name, older) {
+  adapt(target, name, older);
+  const path = join(target, PROVENANCE);
+  const record = JSON.parse(readFileSync(path, 'utf8'));
+  record.commands[`${COMMANDS}/${name}`] = sha256(older);
+  writeFileSync(path, JSON.stringify(record, null, 2));
+}
+
+test('--update keeps a locally adapted command instead of discarding it', () => {
   const { target } = scratchRepo();
-  run({ target,apply: true });
-  const slice = join(target, '.claude', 'commands', 'slice.md');
-  writeFileSync(slice, '# our own slice workflow\n');
+  run({ target, apply: true });
+  adapt(target, 'slice.md', '# our own slice workflow\n');
 
-  run({ target,mode: 'update', apply: true });
+  const { actions } = run({ target, mode: 'update', apply: true });
 
-  assert.equal(
-    readFileSync(slice, 'utf8'),
-    readFileSync(join(TOOLKIT, '.claude', 'commands', 'slice.md'), 'utf8'),
-  );
+  assert.equal(installed(target, 'slice.md'), '# our own slice workflow\n');
+  assert.deepEqual(statuses(actions, 'commands/slice.md'), ['keep']);
+});
+
+test('--update --force is the way to discard a local adaptation', () => {
+  const { target } = scratchRepo();
+  run({ target, apply: true });
+  adapt(target, 'slice.md', '# our own slice workflow\n');
+
+  run({ target, mode: 'update', apply: true, force: true });
+
+  assert.equal(installed(target, 'slice.md'), toolkitCommand('slice.md'));
+});
+
+test('--update refreshes a command the repo never touched', () => {
+  const { target } = scratchRepo();
+  run({ target, apply: true });
+  rewind(target, 'slice.md', '# an older release of /slice\n');
+
+  const { actions } = run({ target, mode: 'update', apply: true });
+
+  assert.equal(installed(target, 'slice.md'), toolkitCommand('slice.md'), 'an unmodified command must take the fix');
+  assert.deepEqual(statuses(actions, 'commands/slice.md'), ['wrote']);
+});
+
+test('--check calls an unmodified stale command a problem and an adaptation information', () => {
+  const { target } = scratchRepo();
+  run({ target, apply: true });
+
+  adapt(target, 'slice.md', '# our own slice workflow\n');
+  rewind(target, 'audit.md', '# an older release of /audit\n');
+
+  const { actions, problems } = run({ target, mode: 'check' });
+
+  assert.deepEqual(statuses(actions, 'commands/slice.md'), ['local'], 'an adaptation is the repo exercising ADR-0007');
+  assert.deepEqual(statuses(actions, 'commands/audit.md'), ['problem'], 'behind and unmodified is a repo missing a fix');
+  assert.equal(problems, 1);
+});
+
+test('a command differing with no record is kept, because it cannot be told from an adaptation', () => {
+  const { target } = scratchRepo();
+  run({ target, apply: true });
+  adapt(target, 'slice.md', '# adapted before the record existed\n');
+  rmSync(join(target, PROVENANCE));
+
+  const { actions } = run({ target, mode: 'update', apply: true });
+
+  assert.equal(installed(target, 'slice.md'), '# adapted before the record existed\n');
+  assert.deepEqual(statuses(actions, 'commands/slice.md'), ['keep']);
+});
+
+test('an unreadable record is reported and overwrites nothing', () => {
+  const { target } = scratchRepo();
+  run({ target, apply: true });
+  adapt(target, 'slice.md', '# our own slice workflow\n');
+  writeFileSync(join(target, PROVENANCE), '{ not json');
+
+  const { actions } = run({ target, mode: 'update', apply: true });
+
+  assert.equal(installed(target, 'slice.md'), '# our own slice workflow\n');
+  assert.deepEqual(statuses(actions, '.stele-vendored.json').slice(0, 1), ['problem'], 'a record we cannot read is said out loud, not swallowed');
+});
+
+test('an install predating the record acquires one from the commands that already match', () => {
+  const { target } = scratchRepo();
+  run({ target, apply: true });
+  rmSync(join(target, PROVENANCE));
+
+  run({ target, apply: true });
+
+  const record = JSON.parse(readFileSync(join(target, PROVENANCE), 'utf8'));
+  assert.equal(record.commands[`${COMMANDS}/slice.md`], sha256(toolkitCommand('slice.md')));
+});
+
+test('a dry run writes no vendoring record', () => {
+  const { target } = scratchRepo();
+  run({ target });
+
+  assert.equal(existsSync(join(target, PROVENANCE)), false, 'the record must describe what is on disk, not what was planned');
 });
 
 test('a deleted command is reported by --check without failing it', () => {

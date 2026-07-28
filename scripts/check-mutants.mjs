@@ -30,6 +30,12 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const LINTER = 'scripts/lint-docs.mjs';
 const IMMUTABLE = 'scripts/check-immutable.mjs';
 
+/** ADR-0022 excluded init-method.mjs wholesale, reasoning that a mutant there mostly proves
+ *  the filesystem still works. `classifyCommand` (ADR-0023) is the first total, IO-free
+ *  predicate in that file, so it falls inside the scope ADR-0022 actually described rather
+ *  than the file it named. Recorded as a refinement, never a silent exception. */
+const INIT = 'scripts/init-method.mjs';
+
 /**
  * The curated mutant list. Each entry names one behaviour and the smallest edit that
  * reverses it.
@@ -90,6 +96,18 @@ export const MUTANTS = [
     file: LINTER,
     find: 'if (!isSuperseded && supersededBy.length > 0) {',
     replace: 'if (!isSuperseded && supersededBy.length > 1) {',
+  },
+  {
+    label: 'classifyCommand: treat an unrecorded command as stale rather than unknown',
+    file: INIT,
+    find: "if (recordedDigest === undefined) return 'unknown';",
+    replace: "if (recordedDigest === undefined) return 'stale';",
+  },
+  {
+    label: 'classifyCommand: swap the stale/adapted verdict',
+    file: INIT,
+    find: "return digest(targetText) === recordedDigest ? 'stale' : 'adapted';",
+    replace: "return digest(targetText) === recordedDigest ? 'adapted' : 'stale';",
   },
   {
     label: 'firstLostLine: weaken the exhausted-scan guard',

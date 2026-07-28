@@ -2,10 +2,10 @@
 id: '0007'
 title: "Slash commands are vendored per repo, and a repo's edits to them survive"
 type: architecture
-status: accepted
+status: superseded
 date: 2026-07-22
 supersedes: []
-superseded_by: []
+superseded_by: ['0023']
 ---
 
 # ADR-0007 — Slash commands are vendored per repo, and a repo's edits to them survive

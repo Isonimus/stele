@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Installs the method kit into a git repo (ADR-0006). Dry-run by default.
 //
-//   node scripts/init-method.mjs <repo-root> [--apply] [--check] [--update]
+//   node scripts/init-method.mjs <repo-root> [--apply] [--check] [--update [--force]]
 //
 // The load-bearing rule lives in installHook(): the pre-commit hook is linked ONLY
 // against a corpus the linter calls clean. An unwired scripts/*-verify.mjs is an R11
@@ -13,6 +13,7 @@
 // an install that checks nothing.
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, lstatSync, readlinkSync, symlinkSync, unlinkSync, readdirSync, realpathSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -35,7 +36,7 @@ const VENDORED = [
 const COMMANDS_DIR = '.claude/commands';
 
 /**
- * The slash commands, vendored too (ADR-0007) — same target path as toolkit path.
+ * The slash commands, vendored too (ADR-0023) — same target path as toolkit path.
  *
  * Read from disk rather than listed, so a new command reaches installed repos without
  * anyone remembering to extend an array here.
@@ -45,6 +46,23 @@ const commandFiles = (toolkit) =>
     .filter((name) => name.endsWith('.md'))
     .sort()
     .map((name) => `${COMMANDS_DIR}/${name}`);
+
+/**
+ * What the toolkit last handed this repo: command path → SHA-256 of the content written
+ * there (ADR-0023).
+ *
+ * Without it an update sees two states where three are needed — a stale copy of an older
+ * release and a deliberate local adaptation are the same observation, "differs from the
+ * toolkit", and the only safe reading of that is the destructive one. Committed, not
+ * ignored: a fresh clone missing it classifies every command as unreconciled.
+ */
+const PROVENANCE = '.claude/.stele-vendored.json';
+
+/** Bumped only when the record's shape changes; an unrecognised version is treated as no
+ *  record at all, which keeps every command rather than overwriting it. */
+const PROVENANCE_VERSION = 1;
+
+const digest = (text) => createHash('sha256').update(text).digest('hex');
 
 /** Scaffolded once and never overwritten: target path ← template path. */
 const SCAFFOLD = [
@@ -138,32 +156,117 @@ function vendor({ target, toolkit, apply, report }) {
 }
 
 /**
- * Slash commands, which are prose and therefore adaptable (ADR-0007).
+ * The recorded digests, or `{}` when there is no usable record.
+ *
+ * A record we cannot read is reported and then treated as absent. That is the safe
+ * direction and not a silenced error: every command classifies as `unknown`, so nothing is
+ * overwritten and the operator sees why (ADR-0023).
+ */
+export function readProvenance(target, report) {
+  const path = join(target, PROVENANCE);
+  if (!existsSync(path)) return {};
+
+  let parsed;
+  try {
+    parsed = JSON.parse(read(path));
+  } catch (error) {
+    report('problem', path, `unreadable (${error.message}) — treating every command as unreconciled, so none will be overwritten. Delete it to start a fresh record.`);
+    return {};
+  }
+
+  const commands = parsed?.commands;
+  if (parsed?.version !== PROVENANCE_VERSION || typeof commands !== 'object' || commands === null) {
+    report('problem', path, `unrecognised shape (expected version ${PROVENANCE_VERSION}) — treating every command as unreconciled, so none will be overwritten.`);
+    return {};
+  }
+  return commands;
+}
+
+function writeProvenance(target, commands) {
+  const path = join(target, PROVENANCE);
+  const ordered = Object.fromEntries(Object.entries(commands).sort(([a], [b]) => a.localeCompare(b)));
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify({ version: PROVENANCE_VERSION, commands: ordered }, null, 2)}\n`);
+}
+
+/**
+ * What an installed command is, relative to the toolkit and to what we last handed over.
+ *
+ * `stale` and `adapted` are the two states the old boolean could not tell apart, and the
+ * whole of ADR-0023 is the ability to name them separately. `unknown` is a differing file
+ * with no record — an install predating the record — which is kept, because assuming
+ * permission to overwrite is exactly the incident.
+ *
+ * @returns {'absent'|'current'|'stale'|'adapted'|'unknown'}
+ */
+export function classifyCommand({ targetText, toolkitText, recordedDigest }) {
+  if (targetText === null) return 'absent';
+  if (targetText === toolkitText) return 'current';
+  if (recordedDigest === undefined) return 'unknown';
+  return digest(targetText) === recordedDigest ? 'stale' : 'adapted';
+}
+
+const KEPT_REASON = {
+  stale: 'behind the toolkit but unmodified here — `--update` takes the new version',
+  adapted: 'adapted locally — kept; `--update --force` discards the adaptation',
+  unknown: 'differs from the toolkit and predates the vendoring record, so it cannot be told from a local adaptation — kept. Reconcile it once by hand, or `--update --force` to take the toolkit version',
+};
+
+/**
+ * Slash commands, which are prose and therefore adaptable (ADR-0023).
  *
  * Copy-if-absent, unlike vendor(): a repo that has tailored `/slice` to its own workflow
- * must not have that overwritten by an install. `--update` is the explicit way to take
- * the toolkit's version back.
+ * must not have that overwritten. `--update` additionally refreshes anything the repo has
+ * not touched, and only `--force` discards an adaptation (ADR-0023).
  */
-function vendorCommands({ target, toolkit, apply, force, report }) {
+function vendorCommands({ target, toolkit, apply, update, force, report }) {
+  const recorded = readProvenance(target, report);
+  const learned = { ...recorded };
+  let changed = false;
+
   for (const path of commandFiles(toolkit)) {
     const to = join(target, path);
-    const from = join(toolkit, path);
-    if (matches(to, from)) {
+    const toolkitText = read(join(toolkit, path));
+    const state = classifyCommand({
+      targetText: existsSync(to) ? read(to) : null,
+      toolkitText,
+      recordedDigest: recorded[path],
+    });
+
+    // An up-to-date command is how an install predating the record acquires one: its bytes
+    // ARE the toolkit's, so the digest is known without having written anything.
+    if (state === 'current') {
       report('ok', to, 'current');
+      if (recorded[path] !== digest(toolkitText)) {
+        learned[path] = digest(toolkitText);
+        changed = true;
+      }
       continue;
     }
-    if (existsSync(to) && !force) {
-      report('keep', to, 'differs from the toolkit — left as it is; `--update` takes the toolkit version');
+
+    const takeover = state === 'absent' || (update && (state === 'stale' || force));
+    if (!takeover) {
+      report('keep', to, KEPT_REASON[state]);
       continue;
     }
-    const verb = existsSync(to) ? 'overwrite' : 'copy';
+
+    const verb = state === 'absent' ? 'copy' : 'overwrite';
     if (!apply) {
       report('would', to, `${verb} from toolkit`);
       continue;
     }
     mkdirSync(dirname(to), { recursive: true });
-    copyFileSync(from, to);
+    writeFileSync(to, toolkitText);
+    learned[path] = digest(toolkitText);
+    changed = true;
     report('wrote', to, `${verb === 'copy' ? 'copied' : 'overwritten'} from toolkit`);
+  }
+
+  // Never on a dry run: the record describes what is on disk, and writing it while writing
+  // nothing else would claim we handed over files we did not.
+  if (apply && changed) {
+    writeProvenance(target, learned);
+    report('wrote', join(target, PROVENANCE), 'recorded what was vendored, so a later --update can tell a stale command from an adapted one');
   }
 }
 
@@ -302,12 +405,22 @@ function check({ target, toolkit, report }) {
     else report('ok', to, 'current');
   }
 
-  // Commands are prose a repo may legitimately adapt, so their drift is informational
-  // (ADR-0007) — reported so it is visible, never counted against a clean check.
+  // An *adaptation* is prose a repo may legitimately own, so it stays informational. A
+  // command merely behind and unmodified is a repo missing a fix, which is a problem — the
+  // record is what lets --check tell those two apart at all (ADR-0023, superseding ADR-0007,
+  // under which no command difference could be counted and so a shipped defect in one was
+  // invisible in every installed repo).
+  const recorded = readProvenance(target, report);
   for (const path of commandFiles(toolkit)) {
     const to = join(target, path);
-    if (!existsSync(to)) report('missing', to, 'not installed — run /init-method --apply');
-    else if (!matches(to, join(toolkit, path))) report('local', to, 'differs from the toolkit — kept; `--update` takes the toolkit version');
+    const state = classifyCommand({
+      targetText: existsSync(to) ? read(to) : null,
+      toolkitText: read(join(toolkit, path)),
+      recordedDigest: recorded[path],
+    });
+    if (state === 'absent') report('missing', to, 'not installed — run /init-method --apply');
+    else if (state === 'stale') report('problem', to, 'behind the toolkit and unmodified here — run /init-method --update');
+    else if (state !== 'current') report('local', to, KEPT_REASON[state]);
     else report('ok', to, 'current');
   }
 
@@ -340,9 +453,10 @@ function check({ target, toolkit, report }) {
  * @param {string} [options.toolkit] this kit's root (overridable for tests)
  * @param {'install'|'check'|'update'} [options.mode]
  * @param {boolean} [options.apply]  false = dry run, the default
+ * @param {boolean} [options.force]  update only: discard local command adaptations too
  * @returns {{actions: Array<{status: string, path: string, message: string}>, problems: number}}
  */
-export function initMethod({ target, toolkit = TOOLKIT, mode = 'install', apply = false }) {
+export function initMethod({ target, toolkit = TOOLKIT, mode = 'install', apply = false, force = false }) {
   const actions = [];
   const report = (status, path, message) => actions.push({ status, path, message });
 
@@ -355,12 +469,12 @@ export function initMethod({ target, toolkit = TOOLKIT, mode = 'install', apply 
     check({ target, toolkit, report });
   } else if (mode === 'update') {
     vendor({ target, toolkit, apply, report });
-    vendorCommands({ target, toolkit, apply, force: true, report });
+    vendorCommands({ target, toolkit, apply, update: true, force, report });
     if (apply) lintAfterUpdate({ target, report });
   } else {
     scaffold({ target, toolkit, apply, report });
     vendor({ target, toolkit, apply, report });
-    vendorCommands({ target, toolkit, apply, force: false, report });
+    vendorCommands({ target, toolkit, apply, update: false, force: false, report });
     buildIndex({ target, apply, report });
     installHook({ target, apply, report });
   }
@@ -374,8 +488,14 @@ function main(argv) {
   const target = positional[0] ?? process.cwd();
   const mode = flags.has('--check') ? 'check' : flags.has('--update') ? 'update' : 'install';
   const apply = flags.has('--apply');
+  const force = flags.has('--force');
 
-  const { actions, problems } = initMethod({ target, mode, apply });
+  if (force && mode !== 'update') {
+    console.error('--force only means anything with --update: it discards local command adaptations.');
+    return 1;
+  }
+
+  const { actions, problems } = initMethod({ target, mode, apply, force });
 
   console.log(`\n${target} — /init-method ${mode}${apply || mode === 'check' ? '' : ' (dry run)'}`);
   for (const a of actions) {

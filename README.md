@@ -81,6 +81,13 @@ updated linter calls red. A release that adds a rule can turn a green repo red b
 hook that is already installed, and the failure otherwise shows up as an unexplained
 blocked commit some time later (ADR-0021).
 
+It also **keeps any slash command this repo adapted**. `.claude/.stele-vendored.json`
+records what the toolkit last handed over, which is what lets an update tell a stale copy
+from a deliberate edit — before that record existed the two were the same observation, so
+taking a fix meant discarding every adaptation
+([ADR-0023](adr/0023-vendored-commands-and-what-an-update-may-overwrite.md)).
+Commit that file. `--update --force` discards adaptations, and has to be typed.
+
 From a clone of this repo, the same entry point runs directly:
 
 ```
@@ -94,7 +101,9 @@ owns the pre-commit slot, the doc checks join it rather than fight for the file
 ([ADR-0008](adr/0008-compose-with-an-existing-hook-framework.md)).
 
 The linter and slash commands are **vendored per repo** and a repo's local edits to the
-commands survive re-runs ([ADR-0007](adr/0007-commands-are-vendored-and-adaptable.md)).
+commands survive re-runs — including across an `--update`
+([ADR-0023](adr/0023-vendored-commands-and-what-an-update-may-overwrite.md), superseding
+[ADR-0007](adr/0007-commands-are-vendored-and-adaptable.md)).
 
 ---
 

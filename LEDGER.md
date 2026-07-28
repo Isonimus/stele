@@ -62,13 +62,6 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   its vendored `.claude/commands/*.md` and `CLAUDE.md` — gamatar and boxel both. Nothing in
   those repos can detect it, so each needs `/init-method --update` and a re-read of its
   scaffolded `CLAUDE.md`, which `--update` does not overwrite (ADR-0020).
-- [bug] `--update` overwrites the slash commands unconditionally (`force: true`), so a repo
-  cannot both adapt a command (ADR-0007 grants this) and take a machinery fix — the only
-  route by which fixes arrive. Both a stale copy and a local adaptation report as "differs
-  from the toolkit", and nothing distinguishes them. Found in `pull_request`, which had
-  adapted `/adr` correctly and would have lost it; the adaptation was adopted upstream
-  instead, which is luck, not a mechanism. Decide the mechanism — a three-way merge against
-  the version last vendored, or a per-file opt-out — then ship it (ADR-0007).
 - [audit] 36 boxel ADRs carry dated `## Amendment` blocks. The `amended` status covers
   them, but whether an amendment should instead be a superseding ADR is unresolved
   (ADR-0002).
