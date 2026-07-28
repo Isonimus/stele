@@ -151,7 +151,7 @@ function vendor({ target, toolkit, apply, report }) {
     }
     mkdirSync(dirname(to), { recursive: true });
     copyFileSync(from, to);
-    report('wrote', to, `${verb}d from toolkit`);
+    report('wrote', to, `${verb === 'copy' ? 'copied' : 'updated'} from toolkit`);
   }
 }
 

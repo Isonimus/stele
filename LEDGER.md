@@ -58,10 +58,29 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   that cannot be followed. Zero rejected, so no code-site rejection notes were needed. Both
   sat in machinery the author had just audited by hand and published. One run, so no ratio
   yet; two more before deciding.
+  **Run 2 (2026-07-28, uncommitted ADR-0023 diff, Sonnet 5):** 2 findings, both the same
+  governance defect from two angles, reproduced and fixed — the draft reversed ADR-0007 on
+  whether a command difference may fail `--check` while filing itself as an unrelated new
+  decision, leaving two accepted ADRs asserting contradictory permanent claims. Fixed by
+  making it a supersession. Seven probes were **rejected** with reasons (corrupt-record
+  recovery, orphaned record entries, READ_SCOPE interaction, vendored citation
+  qualification, `--force` validation, dry-run suppression, mutant coverage), so the
+  finding-to-noise ratio was 2 real to 7 correctly-dismissed — and the dismissals were
+  cheap because it reproduced each one. Notably the author had *prompted* the reviewer to
+  check the exact question it caught, and had still shipped the draft: the value was not
+  novel insight but an unmotivated reader acting on it.
+  One pre-existing crash it surfaced and correctly ruled out of scope is logged separately
+  below.
 - [bug] Every repo already running an install carries the twenty misrouted bare citations in
   its vendored `.claude/commands/*.md` and `CLAUDE.md` — gamatar and boxel both. Nothing in
   those repos can detect it, so each needs `/init-method --update` and a re-read of its
   scaffolded `CLAUDE.md`, which `--update` does not overwrite (ADR-0020).
+- [bug] `/init-method` crashes with an uncaught `EISDIR`/`ELOOP` when a vendored path in the
+  target is a directory or a broken symlink instead of a file — `read()` is called on it with
+  no guard, in `vendor()`, `vendorCommands()` and `check()` alike. Pre-existing (the old
+  `matches()` had the identical failure) and surfaced by the ADR-0023 adversarial pass, which
+  correctly ruled it out of that change's scope. A refusal naming the path is the fix; a
+  stack trace tells the operator nothing about which file is wrong (ADR-0006).
 - [audit] 36 boxel ADRs carry dated `## Amendment` blocks. The `amended` status covers
   them, but whether an amendment should instead be a superseding ADR is unresolved
   (ADR-0002).
