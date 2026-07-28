@@ -12,7 +12,22 @@ get recorded until they have gone stale (stele:ADR-0003).
      generated index is drift by another name.
    - `npm test` — the test suite must pass; docs changes must not disturb code.
 
-2. **Adversarial pass** (stele:ADR-0017) — run it if this change touched a `CLAUDE.md` §4
+2. **Mutation check** — only if this repo has `scripts/check-mutants.mjs` *and* this change
+   touched a module its list covers. Otherwise skip it and say so; on most changes it has
+   nothing to look at.
+
+   - `npm run mutants`. Every non-exempt mutant must die.
+   - A **survivor is not a bug** — it is correct behaviour that no test is watching, so a
+     later refactor could reverse it in silence. Fix it by writing the missing regression
+     test, never by deleting the mutant.
+   - Mark a mutant `equivalent` only when the mutated code genuinely means the same thing,
+     and say why in the entry. That field is the one way a survivor passes, so it is also
+     the obvious place to bury an inconvenient gap.
+   - It measures whether tests *bite*, not whether code is right: it cannot see a missing
+     input or a rule that was wrong from the start. A green run is not a correctness claim,
+     and step 3 is what covers what it misses.
+
+3. **Adversarial pass** (stele:ADR-0017) — run it if this change touched a `CLAUDE.md` §4
    standing invariant, an exported/public API, a data format or anything persisted, or a
    Definition of Done scenario the slice flagged as risky. Otherwise skip it and say so.
 
@@ -34,7 +49,7 @@ get recorded until they have gone stale (stele:ADR-0003).
      raised again by every future fresh reader until the reason is written at the site
      (stele:ADR-0012) or in the §4 table. That is what makes the next pass cheaper than this one.
 
-3. Then answer these four out loud, and act on each:
+4. Then answer these four out loud, and act on each:
    - **Did this change a user- or dev-facing API or feature?** If so, update `README.md`
      (and any docs) in the same change — it is a live document.
    - **Did this make a decision later work must obey?** If so, write it with `/adr` now,
@@ -48,5 +63,5 @@ get recorded until they have gone stale (stele:ADR-0003).
      ADR at that site in a comment (stele:ADR-0012), so the choice announces it is on purpose
      where the edit happens, not only in the §4 table nobody thinks to open.
 
-4. Report what you found and did for each of the four, so the operator can confirm
+5. Report what you found and did for each of the four, so the operator can confirm
    nothing was silently skipped.

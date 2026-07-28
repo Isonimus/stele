@@ -42,6 +42,7 @@
     "lint": "node scripts/lint-docs.mjs .",
     "index": "node scripts/build-index.mjs .",
     "immutable": "node scripts/check-immutable.mjs",
+    "mutants": "node scripts/check-mutants.mjs",
     "scan": "node scripts/scan-legacy.mjs",
     "migrate": "node scripts/migrate-adrs.mjs",
     "init": "node scripts/init-method.mjs"

@@ -63,6 +63,13 @@ Run `/wrap-up` before finishing a task. It runs the linter and asks the three qu
 that actually get forgotten: did this change a user-facing API, record a decision, or
 defer something?
 
+The coverage layer has two instruments, and both state their limits. `npm run mutants`
+(ADR-0022) applies a curated list of behaviour changes to the linter's pure predicates and
+requires each to break a test — a survivor is correct behaviour nothing is watching, fixed
+by writing the missing test, never by deleting the mutant. It is blind to a missing input
+and to a wrong rule, so a green run is not a correctness claim; the adversarial pass below
+is what covers that.
+
 What a linter cannot check, a **fresh reader** can. Where a change touches a §4 invariant,
 a public API, a data format, or a risky Definition of Done scenario, `/wrap-up` runs an
 adversarial pass: a subagent given the diff and the ADR corpus but **not** the author's

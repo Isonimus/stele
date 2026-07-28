@@ -69,18 +69,6 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   adapted `/adr` correctly and would have lost it; the adaptation was adopted upstream
   instead, which is luck, not a mechanism. Decide the mechanism — a three-way merge against
   the version last vendored, or a per-file opt-out — then ship it (ADR-0007).
-- [deferred] Decide whether the mutation probe becomes a standing wired script rather than a
-  one-off. Measured 2026-07-27 over the pure predicates in `lint-docs.mjs` and
-  `check-immutable.mjs`: ten hand-applied operators, **3 killed / 7 survived**; six survivors
-  were correct-but-unpinned behaviour and now have fixtures (9/10 killed, the tenth
-  equivalent). Suite runtime 2.18s, so ten mutants cost ~22s — too slow for the hook, fine
-  for `/wrap-up` or CI. Against adopting a framework: Stryker breaks the zero-dependency
-  principle, and the curated mutant list is the work, not the runner. Note what this does
-  *not* buy — none of the three defects this repo has actually suffered (the `RangeError`,
-  the URL citation, the prefix-vs-subsequence rule) would have been caught, because all
-  three were missing inputs or a wrong spec, which mutation testing is blind to by
-  construction. It buys regression durability, not bug discovery; decide on that basis
-  (ADR-0004).
 - [audit] 36 boxel ADRs carry dated `## Amendment` blocks. The `amended` status covers
   them, but whether an amendment should instead be a superseding ADR is unresolved
   (ADR-0002).
