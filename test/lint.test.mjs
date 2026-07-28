@@ -1,8 +1,16 @@
 // Regression fixtures for every rule in ADR-0003. Run: node --test
 //
-// Each fixture in test/fixtures/ is a miniature repo built to trip exactly one rule.
-// Per CLAUDE.md §3 there is one fixture per rule and no duplicates: the point is that a
-// rule which stops firing gets caught, not that the corpus is large.
+// Each fixture in test/fixtures/ is a miniature repo built to trip exactly one *behaviour*.
+// Several rules need more than one, because a rule can keep firing on the obvious case
+// while a boundary inside it silently stops mattering — R6 has a fixture per side of the
+// supersession graph, R13 one per way a required section can be absent-but-look-present.
+// The bar is still CLAUDE.md §3: no duplicates, no fragile tests. A second fixture earns
+// its place by pinning something the first cannot, and each one below says what that is.
+//
+// Six of them exist because a mutation probe (2026-07-27) hand-applied ten operators to the
+// pure predicates and found seven survivors — behaviour that was correct but unpinned, so a
+// refactor could have quietly reversed it. Nine of the ten now die; the tenth is an
+// equivalent mutant (`!==` to `!=` between two strings) and is not a gap.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,6 +36,9 @@ const errors = (name) => codes(name, 'error');
 const warnings = (name) => codes(name, 'warn');
 
 test('a clean corpus produces no findings at all', () => {
+  // Its ledger cites the same decision padded and unpadded (`ADR-0001`, `ADR-1`), which is
+  // how legacy corpora write them — so id normalisation is pinned here rather than needing
+  // a fixture of its own. Padding to three instead of four breaks only this assertion.
   assert.deepEqual(errors('clean'), []);
   assert.deepEqual(warnings('clean'), []);
 });
@@ -47,12 +58,15 @@ test('R1 rejects a date that is not a real calendar date', () => {
   assert.deepEqual(errors('r1-bad-date'), ['R1']);
 });
 
-test('R1 rejects a date whose components cannot form a day, without crashing', () => {
-  // `2026-02-30` normalises to March and fails the round-trip; `2026-00-01` does not parse
-  // at all, and `toISOString()` on an invalid Date throws. The linter died with a stack
-  // trace, reported nothing about any other document, and broke `--update`'s report
-  // (ADR-0021). Found by the adversarial pass (ADR-0017).
-  assert.deepEqual(errors('r1-impossible-date'), ['R1']);
+test('R1 rejects both kinds of impossible date, and survives the unparseable one', () => {
+  // Two distinct paths, so the fixture carries one document of each. `2026-02-30` parses
+  // and normalises to March, caught by the round-trip; `2026-00-01` does not parse at all,
+  // and `toISOString()` on an invalid Date throws — the linter died with a stack trace,
+  // reported nothing about any other document, and took `--update`'s report with it
+  // (ADR-0021). The crash half was found by the adversarial pass (ADR-0017); the
+  // normalising half was unpinned until a mutation probe removed the round-trip check and
+  // no test objected.
+  assert.deepEqual(errors('r1-impossible-date'), ['R1', 'R1']);
 });
 
 test('R2 catches an id that disagrees with the filename ordinal', () => {
@@ -90,6 +104,14 @@ test('R5 catches a supersession naming a target that does not exist', () => {
 
 test('R6 catches status disagreeing with supersession', () => {
   assert.deepEqual(errors('r6-status-mismatch'), ['R6']);
+});
+
+test('R6 catches a superseded_by naming exactly one target while the status stays accepted', () => {
+  // The sibling of the fixture above, from the other side of the graph — and the only one
+  // that pins the boundary: with a single-element list, weakening the guard to `length > 1`
+  // silently stops reporting, which no test noticed until a mutation probe tried it. R7
+  // fires too, correctly, because 0001 claims to supersede a document still reading live.
+  assert.deepEqual(errors('r6-superseded-by-but-accepted'), ['R6', 'R7']);
 });
 
 test('R7 catches a live ADR that another claims to supersede', () => {
@@ -135,10 +157,13 @@ test('R8/R14 do not read an ordinal inside a URL as a citation', () => {
   assert.deepEqual(warnings('r14-url-not-a-citation'), []);
 });
 
-test('R15 catches a relative link with no file behind it', () => {
+test('R15 catches relative links with no file behind them, in a directory or at the root', () => {
+  // Two findings, one per branch of the scope test: `docs/design.md` matches a scope entry
+  // by directory prefix, `LEDGER.md` matches one exactly. The exact-match branch was
+  // unpinned — deleting it left the suite green while root-level links went unchecked.
   // URLs and in-page anchors are outside what a file check can decide, so the fixture
-  // carries one of each alongside the broken link and expects a single finding.
-  assert.deepEqual(errors('r15-broken-link'), ['R15']);
+  // carries one of each and they must not add findings.
+  assert.deepEqual(errors('r15-broken-link'), ['R15', 'R15']);
 });
 
 test('R10 errors when the root holds no document directory at all', () => {
@@ -200,6 +225,20 @@ test('R13 errors when the Definition of Done is prose, not a Given/When/Then tri
   // Presence of the header is not enough: the section must hold a real scenario. Shape,
   // not truth — the check reads that the three step kinds exist, never what they claim.
   assert.deepEqual(errors('r13-slice-no-triad'), ['R13']);
+});
+
+test('R13 does not accept one step kind as a scenario', () => {
+  // A lone `Given` is not a triad. The conjunction was unpinned: flipping `&&` to `||` in
+  // the triad test left every fixture passing, because the only negative case carried no
+  // steps at all and fails either way.
+  assert.deepEqual(errors('r13-slice-partial-triad'), ['R13']);
+});
+
+test('R13 does not count a triad that sits under a later heading', () => {
+  // `## Definition of Done` is empty and the steps live under `## Notes`. This pins the
+  // section boundary: reading a section to the end of the body instead of to the next
+  // heading turns an empty required section into a satisfied one.
+  assert.deepEqual(errors('r13-slice-bleeding-section'), ['R13']);
 });
 
 test('R12/R13 do not accept a section quoted inside a fenced code block', () => {
