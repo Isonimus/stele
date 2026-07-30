@@ -35,6 +35,19 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   signal separates them — the same absence that motivates ADR-0002. Decide whether batch is
   retired going forward or stays a legitimate kind, and retype the content-batches by hand
   (ADR-0002).
+- [feature] A ledger rule for **section loss**: fail when a commit removes a `###`/`####`
+  heading from `LEDGER.md`. Every existing rule reads the ledger's *content* — rule 8
+  resolves citations — and none notices the file getting smaller, so the one tracker in a
+  repo can be silently truncated by a commit that greens every check. Incident (the
+  precedent this repo requires before a rule): boxel `1c156b9` deleted its entire
+  `### Mobs & AI` section, 78 lines of unrelated worklist, while rewriting one entry two
+  sections below; it survived pre-commit, review and a push, and was found nine commits
+  later only by running `git log -S` on a line that looked new. Closing an item deletes a
+  **bullet**, never a heading, which is what makes the heading set a sound invariant to
+  guard — the one legitimate removal is a section whose last item closed, rare enough to
+  carry an explicit allowance or a `--no-verify`. Cheap: the hook already reads the commit
+  rather than the working tree (ADR-0018), so both sides of the comparison are in hand
+  (ADR-0010).
 - [deferred] Source-side citation resolve-check: a rule that reads `ADR-NNNN` tokens in
   source comments and fails when the citation does not resolve, the code-site sibling of
   rule 8. Blocked on settling a repo-specific file scope — what counts as source, what is
