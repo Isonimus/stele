@@ -127,6 +127,14 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   parallelise is enough to reproduce the above at smaller scale. Blocked on nothing; it is a
   sentence in the command, held back only so it lands with whatever decides the R16 question
   rather than as its own commit (ADR-0017).
+- [deferred] Three of this repo's own reinventions predate the rule that now governs them and
+  do not satisfy it: the doc linter (`adr-tools`, `log4brains`), the index generator, and the
+  vendor/update mechanism (a package manager). ADR-0022 satisfies the rule for the mutation
+  runner — a named cost plus a measured build — and no record does the same for the other three;
+  the zero-dependency property is asserted in ADR-0003 but never priced against what the
+  existing tools would have cost. Either write that comparison or record that the choice was
+  made without one. Not fixable by asserting here that it was obviously right, which is what an
+  unmeasured departure always feels like from inside (ADR-0025).
 - [audit] 36 boxel ADRs carry dated `## Amendment` blocks. The `amended` status covers
   them, but whether an amendment should instead be a superseding ADR is unresolved
   (ADR-0002).

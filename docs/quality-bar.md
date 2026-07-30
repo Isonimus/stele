@@ -47,6 +47,21 @@ stele:ADR-0003 exists to prevent, committed one level up.
   no unused exports left behind; dead code is deleted, not parked. Version control remembers
   it.
 - **Never hardcode absolute paths** in config files, scripts, or commands. Always relative.
+- **Prefer the established solution; argue any departure in writing** (stele:ADR-0025). Where a
+  well-tested library, pattern, protocol, or industry standard already covers the need, propose
+  it first and **by name**, before drawing a bespoke design — including when the operator asked
+  for the bespoke build, since asking for one is not evidence that none exists. Hand-rolling is
+  the exception and it is a legitimate one, under two conditions together: it names the property
+  the standard would cost (a hard constraint, a dependency budget, a platform or licence limit)
+  **and** it states the build cost as a measurement, not an estimate. What is not admissible is
+  reinventing by default, or meeting the standard after the code is written — at that point the
+  sunk build argues for itself and the comparison is a design against a rewrite. Both cases are
+  on the record in the repo that ships this file: `stele:ADR-0022` declines a mutation-testing
+  framework, naming the zero-dependency property it would cost and the twenty lines its
+  replacement takes; `stele:ADR-0008` is the bill for the omission — a design that assumed the
+  pre-commit slot was free met the widely-deployed tool that owns it three ADRs later, and pays
+  for a second install shape permanently. Inside a single codebase the same rule is
+  `stele:ADR-0013`.
 
 ## 3. Design first — measure twice, cut once — `verified_by: lint-docs.mjs` (partly)
 
@@ -123,7 +138,8 @@ builds on a bad premise; being corrected early is cheaper for everyone.
 
 Correction is not only for factual errors. When the operator asks for something that violates
 a recorded decision without justifiable reason, or proposes a subpar fix, feature, or plan,
-push back the same way — with evidence and a concrete better option. An operator can lack
+push back the same way — with evidence and a concrete better option — and where a standard
+already solves the problem, the better option is that standard, named (§2). An operator can lack
 context a decision record already settled, so citing it *is* the correction. If a violation
 turns out to be justified, that justification is written down as a new or superseding ADR —
 never a silent exception.
