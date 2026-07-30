@@ -16,23 +16,34 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { ADAPTABLE_DOCS } from '../scripts/init-method.mjs';
+
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
 /** Bare `ADR-NNNN` — no `<repo>:` qualifier immediately before it. Mirrors the linter's
  *  CITATION pattern; a leading character class stands in for the absent qualifier. */
 const BARE_CITATION = /(^|[^:\w.-])(ADR[-\s]\d{1,4})/g;
 
-/** The text vendored verbatim into installed repos: slash commands (ADR-0007) and the
- *  scaffold templates (ADR-0006). Read from disk, so a new file is covered on arrival
- *  rather than when someone remembers to extend a list. */
+/** The text vendored verbatim into installed repos: slash commands (ADR-0007), the scaffold
+ *  templates (ADR-0006), and the adaptable docs (ADR-0024).
+ *
+ *  The directories are read from disk so a new file is covered on arrival rather than when
+ *  someone remembers to extend a list. The docs cannot be — `docs/` also holds this repo's
+ *  own live docs, which are not vendored — so they come from the installer's own list rather
+ *  than a copy of it. A second literal here would be a list to keep in step, which is the
+ *  read-scope failure of ADR-0021: the rule shipped, the second list did not, and the check
+ *  reported green over files nobody was reading. */
 function vendoredTextFiles() {
   const dirs = ['.claude/commands', 'templates'];
-  return dirs.flatMap((dir) =>
-    readdirSync(join(ROOT, dir))
-      .filter((name) => name.endsWith('.md'))
-      .sort()
-      .map((name) => join(dir, name)),
-  );
+  return [
+    ...dirs.flatMap((dir) =>
+      readdirSync(join(ROOT, dir))
+        .filter((name) => name.endsWith('.md'))
+        .sort()
+        .map((name) => join(dir, name)),
+    ),
+    ...ADAPTABLE_DOCS,
+  ];
 }
 
 test('vendored text cites this repo by name, never bare', () => {

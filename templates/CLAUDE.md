@@ -4,10 +4,14 @@
 
 Stack: {{STACK}}
 
-General working practices — quality bar, commit hygiene, delegation, correction, language
-— live in `~/.claude/CLAUDE.md` and apply here without being restated. This file carries
-only what is specific to **this** repo. Restating a global rule here would create a second
-copy with no sync path, which is the failure stele:ADR-0005 exists to prevent.
+General working practices — quality bar, testing standard, commit hygiene, delegation,
+correction, language — live in [`docs/quality-bar.md`](docs/quality-bar.md) and apply here
+without being restated. It ships with the method and is vendored into this repo, so it is
+yours to adapt; an update keeps what you changed (stele:ADR-0024).
+
+This file carries only what is specific to **this** repo. Restating a rule from the bar here
+would create a second copy with no sync path, which is the failure stele:ADR-0005 exists to
+prevent.
 
 ## 1. Document taxonomy — four kinds
 

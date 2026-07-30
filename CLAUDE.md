@@ -77,46 +77,20 @@ reasoning, whose findings must state a concrete failure and get reproduced befor
 acted on (ADR-0017). Correctly *rejected* findings get written at the code site (ADR-0012)
 — otherwise every future fresh reader raises them again.
 
-## 3. Quality bar
+## 3. Quality bar — [`docs/quality-bar.md`](docs/quality-bar.md)
 
-- **Every relevant piece of logic gets a regression test.** No excuses — and no
-  irrelevant, duplicate, or fragile tests either. Tests are codebase: same standards,
-  same strict typing.
-- **Never use `any`.** Use `unknown` + narrowing, generics, or proper types.
-- Industry standards. No hacks, no quick fixes. Find the root cause and fix it for good.
-- **Boyscout rule:** leave every touched file better than found. A noticed bug is ours
-  even if we didn't introduce it — fix it, or log it in `LEDGER.md` if deferred.
-- New linter rules cite the incident that motivated them.
+The quality bar, the testing standard, commit hygiene, the operator-may-be-wrong framing,
+delegation and language live there and apply here without being restated (ADR-0024). It is
+the file this repo ships, so this repo is bound by it like any consumer — and until
+2026-07-30 four of its sections were restated here in drifted, lossy form, which is the
+ADR-0005 failure running inside the repo that recorded it. Cite it; do not copy from it.
 
-## 4. Commits
+Three things it does not cover, because they are specific to this repo:
 
-- **No `Co-Authored-By` or generated-by trailers.** Plain conventional messages.
-- Ship the doc and the code in the same commit.
-
-## 5. The operator may be wrong
-
-The operator (Iker) is not infallible. If a proposal or assumption is incorrect, say so
-directly, with data or a clear explanation. Don't defer to a wrong idea to be agreeable —
-the operator is glad to change their mind when proven wrong, and would rather be
-corrected early than build on a bad premise.
-
-This cuts both ways: when the evidence contradicts *our own* stated convention, report
-that too. This repo exists because a survey found a three-week-old rule that had never
-once been followed.
-
-Correction is not only for factual errors. When the operator asks for something that
-violates an ADR without a justifiable reason, or proposes a subpar fix, feature, or
-plan, push back the same way — with evidence and a concrete better option, argued from
-this repo's best-practices and ADR-conscious perspective. An operator can lack context a
-decision record already settled, so citing it *is* the correction. And if a violation
-turns out to be justified, that justification is a new (or superseding) ADR — never a
-silent exception.
-
-## 6. Token economy
-
-- The main model plans, reviews, corrects, and writes tests. Delegate rock-mining
-  (mechanical refactors, boilerplate, broad surveys) to cheaper subagents — **Haiku 4.5
-  for mechanical work, Sonnet 5 for work needing judgement** — instructed to return
-  minimal, structured output so the main context stays clean.
-- When context is deep and the task context is clearly switching, **tell the operator
-  it's a good moment to `/compact`** — they forget, and it causes context rot.
+- **New linter rules cite the incident that motivated them.** A rule with no incident behind
+  it is a preference, and preferences do not earn a place in a pre-commit hook.
+- **A justified rule-violation is recorded as a new or superseding ADR** — never a silent
+  exception. The bar says a justification gets written down; here, that is where it goes.
+- **A correction is argued from this repo's ADR corpus.** Citing the decision that already
+  settled a question *is* the correction; the operator can lack context a record holds. This
+  repo exists because a survey found a three-week-old rule that had never once been followed.

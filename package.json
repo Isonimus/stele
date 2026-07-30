@@ -29,6 +29,7 @@
   "files": [
     "scripts/",
     "templates/",
+    "docs/",
     ".claude/commands/",
     ".claude/hooks/",
     "README.md",

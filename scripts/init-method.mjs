@@ -35,21 +35,36 @@ const VENDORED = [
 
 const COMMANDS_DIR = '.claude/commands';
 
-/**
- * The slash commands, vendored too (ADR-0023) — same target path as toolkit path.
- *
- * Read from disk rather than listed, so a new command reaches installed repos without
- * anyone remembering to extend an array here.
- */
-const commandFiles = (toolkit) =>
-  readdirSync(join(toolkit, COMMANDS_DIR))
-    .filter((name) => name.endsWith('.md'))
-    .sort()
-    .map((name) => `${COMMANDS_DIR}/${name}`);
+/** Prose vendored alongside the commands and under the same rules: adaptable, kept on
+ *  update unless untouched. The quality bar is the standard a slice's Definition of Done
+ *  is measured against, so it has to reach the repo the Definition of Done lives in
+ *  (ADR-0024). A Python repo cutting the rule about `any` is use, not drift. */
+export const ADAPTABLE_DOCS = ['docs/quality-bar.md'];
 
 /**
- * What the toolkit last handed this repo: command path → SHA-256 of the content written
- * there (ADR-0023).
+ * Everything vendored under the adaptable rules (ADR-0023) — same target path as toolkit
+ * path, which is what lets one classification serve both `--update` and `--check`.
+ *
+ * Commands are read from disk rather than listed, so a new command reaches installed repos
+ * without anyone remembering to extend an array here.
+ */
+const adaptableFiles = (toolkit) => [
+  ...readdirSync(join(toolkit, COMMANDS_DIR))
+    .filter((name) => name.endsWith('.md'))
+    .sort()
+    .map((name) => `${COMMANDS_DIR}/${name}`),
+  ...ADAPTABLE_DOCS,
+];
+
+/**
+ * What the toolkit last handed this repo: vendored adaptable path → SHA-256 of the content
+ * written there (ADR-0023).
+ *
+ * The JSON key is still `commands`, though the set now includes `docs/quality-bar.md`
+ * (ADR-0024). Renaming it would mean bumping PROVENANCE_VERSION, and an unrecognised
+ * version is deliberately read as *no record at all* — so a cosmetic rename would
+ * reclassify every command in every installed repo as `unknown` on the next run. The
+ * inaccuracy is cheaper than that, and this comment is the fix.
  *
  * Without it an update sees two states where three are needed — a stale copy of an older
  * release and a deliberate local adaptation are the same observation, "differs from the
@@ -199,7 +214,7 @@ function writeProvenance(target, commands) {
  *
  * @returns {'absent'|'current'|'stale'|'adapted'|'unknown'}
  */
-export function classifyCommand({ targetText, toolkitText, recordedDigest }) {
+export function classifyVendored({ targetText, toolkitText, recordedDigest }) {
   if (targetText === null) return 'absent';
   if (targetText === toolkitText) return 'current';
   if (recordedDigest === undefined) return 'unknown';
@@ -213,21 +228,21 @@ const KEPT_REASON = {
 };
 
 /**
- * Slash commands, which are prose and therefore adaptable (ADR-0023).
+ * Slash commands and the quality bar — prose, and therefore adaptable (ADR-0023, ADR-0024).
  *
  * Copy-if-absent, unlike vendor(): a repo that has tailored `/slice` to its own workflow
  * must not have that overwritten. `--update` additionally refreshes anything the repo has
  * not touched, and only `--force` discards an adaptation (ADR-0023).
  */
-function vendorCommands({ target, toolkit, apply, update, force, report }) {
+function vendorAdaptable({ target, toolkit, apply, update, force, report }) {
   const recorded = readProvenance(target, report);
   const learned = { ...recorded };
   let changed = false;
 
-  for (const path of commandFiles(toolkit)) {
+  for (const path of adaptableFiles(toolkit)) {
     const to = join(target, path);
     const toolkitText = read(join(toolkit, path));
-    const state = classifyCommand({
+    const state = classifyVendored({
       targetText: existsSync(to) ? read(to) : null,
       toolkitText,
       recordedDigest: recorded[path],
@@ -411,9 +426,9 @@ function check({ target, toolkit, report }) {
   // under which no command difference could be counted and so a shipped defect in one was
   // invisible in every installed repo).
   const recorded = readProvenance(target, report);
-  for (const path of commandFiles(toolkit)) {
+  for (const path of adaptableFiles(toolkit)) {
     const to = join(target, path);
-    const state = classifyCommand({
+    const state = classifyVendored({
       targetText: existsSync(to) ? read(to) : null,
       toolkitText: read(join(toolkit, path)),
       recordedDigest: recorded[path],
@@ -469,12 +484,12 @@ export function initMethod({ target, toolkit = TOOLKIT, mode = 'install', apply 
     check({ target, toolkit, report });
   } else if (mode === 'update') {
     vendor({ target, toolkit, apply, report });
-    vendorCommands({ target, toolkit, apply, update: true, force, report });
+    vendorAdaptable({ target, toolkit, apply, update: true, force, report });
     if (apply) lintAfterUpdate({ target, report });
   } else {
     scaffold({ target, toolkit, apply, report });
     vendor({ target, toolkit, apply, report });
-    vendorCommands({ target, toolkit, apply, update: false, force: false, report });
+    vendorAdaptable({ target, toolkit, apply, update: false, force: false, report });
     buildIndex({ target, apply, report });
     installHook({ target, apply, report });
   }

@@ -39,10 +39,13 @@ Nothing outside the target repo is written — never `$HOME`, never `~/.claude/C
 (stele:ADR-0016). Wiring the operator's machine-level conventions is a personal choice, not
 an install step; do not add it back as a convenience.
 
-The commands are vendored under softer rules than the machinery (stele:ADR-0023): a repo may
-edit its own copy of `/slice` or `/wrap-up` to say something repo-specific, and an
-install keeps that edit rather than overwriting it. If you edit one, say so — an edit
-made in an installed repo does not travel back to the toolkit.
+The commands and `docs/quality-bar.md` are vendored under softer rules than the machinery
+(stele:ADR-0023): a repo may edit its own copy of `/slice`, `/wrap-up` or the bar to say
+something repo-specific, and an install keeps that edit rather than overwriting it. If you
+edit one, say so — an edit made in an installed repo does not travel back to the toolkit.
+
+The quality bar is the standard the slice `## Definition of Done` is measured against
+(stele:ADR-0024). Cite it from the scaffolded `CLAUDE.md`; do not restate its rules there.
 
 ## 3. If the repo already has a hook framework
 

@@ -123,3 +123,24 @@ larger scale, and that rule executed zero times in three weeks (ADR-0001).
 **Ban memory entirely.** Rejected: per-project operator-personal facts are real and have
 no other home. Git identity is per-repo by the operator's explicit practice, so a global
 file would be the wrong destination for it, not merely an unnecessary one.
+
+## Amendment — 2026-07-30
+
+The alternative rejected above — *"put general practices in every repo's `CLAUDE.md`"* — is
+**taken up**, in the narrower form ADR-0024 describes: the quality bar is vendored into the
+target repo as `docs/quality-bar.md` and cited from its `CLAUDE.md`, rather than restated
+there.
+
+The rejection's reasoning is not overturned; it is answered. It rested on "no sync mechanism
+and no reconciliation point", which was true of a hand-copied file in 2026-07-20 and is no
+longer true: ADR-0023 records what the toolkit last wrote and reconciles a stale copy against
+a deliberate adaptation. What made the alternative unacceptable was its unreconcilability,
+and that is the property that changed.
+
+The routing table itself is unaffected and still governs. This amendment concerns one
+artifact — the general-practice document — whose destination was decided on the assumption
+that reaching every repo meant duplicating into every repo.
+
+The sentence above stating that `global/CLAUDE.md` "is installed by symlink, not by copy" was
+already withdrawn by ADR-0016, which held that vendoring into repo X must not write outside
+repo X. That holding stands and is why ADR-0024 vendors a file rather than linking one.

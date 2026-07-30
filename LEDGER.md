@@ -71,16 +71,32 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   novel insight but an unmotivated reader acting on it.
   One pre-existing crash it surfaced and correctly ruled out of scope is logged separately
   below.
+  **Run 3 (2026-07-30, uncommitted ADR-0024 diff, Sonnet 5, correctness brief):** **zero
+  findings.** The reviewer traced the five-state classifier over the new adaptable-doc path,
+  installed into a scratch repo and committed through the resulting hook, checked the
+  `docs/` read-scope against both the linter and the hook, and independently confirmed each
+  new test fails when the production change is reverted. It reported that it could not
+  construct a state producing a wrong output, a crash, or a corrupt record — a null result,
+  reported as one rather than padded. Nothing to reject, so no code-site notes were needed.
+  Three runs now exist (2 real + 2 real + 0, against 7 correctly-dismissed), so the
+  precondition on this item is met and the rule question is decidable.
 - [bug] Every repo already running an install carries the twenty misrouted bare citations in
   its vendored `.claude/commands/*.md` and `CLAUDE.md` — gamatar and boxel both. Nothing in
   those repos can detect it, so each needs `/init-method --update` and a re-read of its
   scaffolded `CLAUDE.md`, which `--update` does not overwrite (ADR-0020).
 - [bug] `/init-method` crashes with an uncaught `EISDIR`/`ELOOP` when a vendored path in the
   target is a directory or a broken symlink instead of a file — `read()` is called on it with
-  no guard, in `vendor()`, `vendorCommands()` and `check()` alike. Pre-existing (the old
+  no guard, in `vendor()`, `vendorAdaptable()` and `check()` alike. Pre-existing (the old
   `matches()` had the identical failure) and surfaced by the ADR-0023 adversarial pass, which
   correctly ruled it out of that change's scope. A refusal naming the path is the fix; a
   stack trace tells the operator nothing about which file is wrong (ADR-0006).
+- [decision] `global/CLAUDE.md` and the shipped `docs/quality-bar.md` now carry the same
+  rules twice. The shipped bar is the method's standard; the global file is the operator's
+  personal one and governs repos with no install, so ADR-0024 deliberately left it alone
+  rather than change a machine-level file on its own initiative. Decide whether the personal
+  file shrinks to identity and routing and cedes the bar to the method, or stays whole and
+  the two are knowingly parallel. Neither is checkable, so whichever is chosen gets written
+  down (ADR-0024, ADR-0005).
 - [audit] 36 boxel ADRs carry dated `## Amendment` blocks. The `amended` status covers
   them, but whether an amendment should instead be a superseding ADR is unresolved
   (ADR-0002).

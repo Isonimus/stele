@@ -176,6 +176,66 @@ test('a repo edit to a command survives --apply and is reported, not counted aga
   assert.deepEqual(statuses(actions, 'commands/slice.md'), ['local']);
 });
 
+// ADR-0024. The quality bar is the standard a slice's Definition of Done is measured
+// against, so a repo that gets `/slice` and R13 without it gets the demand and not the
+// standard. It rides the adaptable rules rather than the machinery ones: a repo whose stack
+// has no `any` should cut that rule, and cutting it is use, not drift.
+const QUALITY_BAR = join('docs', 'quality-bar.md');
+
+test('--apply vendors the quality bar the Definition of Done is measured against', () => {
+  const { target } = scratchRepo();
+  run({ target, apply: true });
+
+  const vendored = join(target, QUALITY_BAR);
+  assert.ok(existsSync(vendored), 'the quality bar was not vendored');
+  assert.equal(readFileSync(vendored, 'utf8'), readFileSync(join(TOOLKIT, QUALITY_BAR), 'utf8'));
+});
+
+test('the scaffolded CLAUDE.md points at the bar it was shipped with', () => {
+  // The pair is the invariant, not either file: a template citing a path nothing installs
+  // is the state ADR-0016 left `/init-method` in, where prose told readers about a file the
+  // installer had stopped writing.
+  const { target } = scratchRepo();
+  run({ target, apply: true });
+
+  assert.match(readFileSync(join(target, 'CLAUDE.md'), 'utf8'), /docs\/quality-bar\.md/);
+});
+
+test('--update keeps a repo that cut a rule from its own quality bar', () => {
+  const { target } = scratchRepo();
+  run({ target, apply: true });
+  const ours = '# Quality bar\n\nNo `any` does not apply to a Python repo.\n';
+  writeFileSync(join(target, QUALITY_BAR), ours);
+
+  const { actions } = run({ target, mode: 'update', apply: true });
+
+  assert.equal(readFileSync(join(target, QUALITY_BAR), 'utf8'), ours);
+  assert.deepEqual(statuses(actions, 'quality-bar.md'), ['keep']);
+});
+
+test('--check counts an untouched but stale quality bar as a problem', () => {
+  // Same reasoning as a stale command (ADR-0023 §5): a bar nobody adapted and that is behind
+  // the toolkit is a repo missing a fix, not an unusual install. A rule added to the bar
+  // after a real incident has to be able to reach the repos that installed it.
+  const { target } = scratchRepo();
+  run({ target, apply: true });
+  writeFileSync(join(target, QUALITY_BAR), '# an older release\n');
+  const record = JSON.parse(readFileSync(join(target, PROVENANCE), 'utf8'));
+  record.commands[QUALITY_BAR] = sha256('# an older release\n');
+  writeFileSync(join(target, PROVENANCE), JSON.stringify(record, null, 2));
+
+  const { actions, problems } = run({ target, mode: 'check' });
+
+  assert.equal(problems, 1);
+  assert.deepEqual(statuses(actions, 'quality-bar.md'), ['problem']);
+
+  run({ target, mode: 'update', apply: true });
+  assert.equal(
+    readFileSync(join(target, QUALITY_BAR), 'utf8'),
+    readFileSync(join(TOOLKIT, QUALITY_BAR), 'utf8'),
+  );
+});
+
 // ADR-0023. `--update` used to overwrite every command whose bytes differed, which made
 // taking a machinery fix and keeping a local adaptation mutually exclusive — the incident
 // in `pull_request`, whose correct `/adr` fix an update would have silently reverted.

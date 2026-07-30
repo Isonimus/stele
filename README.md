@@ -94,7 +94,8 @@ From a clone of this repo, the same entry point runs directly:
 node scripts/init-method.mjs <repo-root> --apply
 ```
 
-It installs `CLAUDE.md`, `LEDGER.md`, the linter, the index builder, and a pre-commit hook —
+It installs `CLAUDE.md`, `LEDGER.md`, `docs/quality-bar.md`, the linter, the index builder,
+and a pre-commit hook —
 and **refuses to install the hook on a linter-red corpus**, because a hook that blocks every
 commit is the tool bricking the repo it was meant to protect. If a hook framework already
 owns the pre-commit slot, the doc checks join it rather than fight for the file
@@ -104,6 +105,19 @@ The linter and slash commands are **vendored per repo** and a repo's local edits
 commands survive re-runs — including across an `--update`
 ([ADR-0023](adr/0023-vendored-commands-and-what-an-update-may-overwrite.md), superseding
 [ADR-0007](adr/0007-commands-are-vendored-and-adaptable.md)).
+
+`docs/quality-bar.md` rides the same rules. It is the standard a slice's
+`## Definition of Done` is measured against — no `any`, fail loud, no magic values, and the
+testing rule that a test derives from the spec and never from the code
+([ADR-0024](adr/0024-the-quality-bar-ships-with-the-method.md)). Shipping the demand for a
+Definition of Done without the standard it is judged by left every consumer to supply the
+standard themselves. Adapt it freely: a repo whose stack has no `any` should cut that rule,
+and an `--update` keeps the cut.
+
+Almost all of it is **`review-only`** and says so in the file. No linter here can tell
+whether a test was derived from a specification or from the implementation it tests; that is
+what the adversarial pass in `/wrap-up` is for, and claiming otherwise would be the failure
+this kit exists to remove.
 
 ---
 
@@ -254,6 +268,13 @@ happened ([ADR-0005](adr/0005-write-routing-and-the-bounds-of-memory.md)):
 
 A rule that governs a codebase never belongs in assistant memory: memory is invisible to
 every other reader of the repo, unversioned, and lost on a change of machine.
+
+One artifact moved off row two. General *working practice* — the quality bar — now ships
+with the method as `docs/quality-bar.md` rather than living only in a personal global file
+([ADR-0024](adr/0024-the-quality-bar-ships-with-the-method.md)). ADR-0005 rejected
+per-repo copies for having no reconciliation point; the vendoring record built in ADR-0023
+is that point, so the rejection is answered rather than overruled. The table itself still
+governs everything else.
 
 ---
 
