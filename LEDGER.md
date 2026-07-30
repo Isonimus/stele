@@ -110,6 +110,23 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   file shrinks to identity and routing and cedes the bar to the method, or stays whole and
   the two are knowingly parallel. Neither is checkable, so whichever is chosen gets written
   down (ADR-0024, ADR-0005).
+- [bug] A delegated audit rubric that does not forbid sub-delegation has unbounded cost. The
+  2026-07-30 test-basis sweep fanned 12 reviewers into an estimated 40–50 agents — at least
+  six spawned their own children — and exhausted the month's API spend; eight batches died
+  mid-run and three returned `completed` with no report, each ending on a sentence about
+  waiting for children they never collected. The rubric forbade modifying files, padding
+  findings and reporting style nits, and never thought to forbid recursion. The control batch
+  read its own files (11 files, 176 cases, ~10 min) and produced the best report of the
+  twelve, so the partition size and the brief were sound and only the recursion was not.
+  Fix is one line in any brief that fans out — *read the files yourself; do not spawn
+  subagents* — and the place it belongs is `/wrap-up`'s adversarial-pass instructions plus any
+  future audit template, since both hand a brief to an agent that can spawn more (ADR-0017).
+- [bug] `/wrap-up`'s adversarial brief inherits the same hole and has simply never been fanned
+  out wide enough to hit it: it says "spawn one subagent (two only if…)" to the *caller* and
+  says nothing to the subagent about spawning further. One reviewer that decides to
+  parallelise is enough to reproduce the above at smaller scale. Blocked on nothing; it is a
+  sentence in the command, held back only so it lands with whatever decides the R16 question
+  rather than as its own commit (ADR-0017).
 - [audit] 36 boxel ADRs carry dated `## Amendment` blocks. The `amended` status covers
   them, but whether an amendment should instead be a superseding ADR is unresolved
   (ADR-0002).
