@@ -2,7 +2,7 @@
 id: '0024'
 title: "The quality bar ships with the method, vendored into the repo, and tests derive from the spec rather than from the code"
 type: architecture
-status: accepted
+status: amended
 date: 2026-07-30
 supersedes: []
 superseded_by: []
@@ -183,3 +183,67 @@ number that ADR warned about.
 - Adoption is unproven and is recorded as such. If a later audit of a repo that had the bar
   from the first commit shows a materially lower rate, that is the evidence this decision
   lacks, and it belongs in a new ADR rather than an edit to this one.
+
+## Amendment — 2026-07-31: the import-the-constant subset is worth checking after all
+
+Decision 6 dismissed the one machine-checkable part of this rule in a subordinate clause:
+"Even a language-aware checker would only reach the weaker property that a test does not
+import the constant it asserts — **which the anvil finding shows is not the property that
+matters**, since that test imported nothing and derived the wrong number by hand."
+
+The first half is right. The bolded conclusion does not follow from it, and a wider
+measurement says so.
+
+**The measurement.** boxel's suite was swept on 2026-07-30 — ~765 of 2124 cases across ~54
+files, against the vendored Java, by parallel review with each finding reproduced before
+being logged. It produced three new production bugs, and a distribution the 382-case sample
+behind the table above was too small to show: **the single most repeated defect in the suite
+is a test importing the very constant it asserts.** Six sites, verified by hand:
+
+| Site | Form |
+|---|---|
+| `test/effects.test.ts:30` | `toBe(Math.floor(7 / POISON_TICK_SECONDS))` |
+| `test/effects.test.ts:50` | `toBeCloseTo(30 * HUNGER_EXHAUSTION_RATE, 3)` |
+| `test/physics.test.ts:34` | `toBeCloseTo(-GRAVITY / 60, 5)` |
+| `test/physics.test.ts:42` | `toBe(-TERMINAL_VELOCITY)` |
+| `test/signs.test.ts:141` | `toHaveLength(SIGN_LINE_LENGTH)` |
+| `test/temptation.test.ts:44` | `toBeCloseTo(TEMPT_SPEED, 5)` |
+
+Five import the constant from **the module under test**. The sixth imports it from a
+collaborator — `TEMPT_SPEED` lives in `senses.ts`, the subject is `cow.ts` — so the
+assertion is still `K === K` while the import names a different file.
+
+**The anvil finding and these six are different failures, and Decision 6 collapsed them.**
+The anvil test proves a checker of this kind is not *sufficient*: an author can read the
+source, misread it, and hand-write a wrong literal that no import rule sees. That is a claim
+about coverage. Decision 6 promoted it to a claim about worth — that the property "is not the
+property that matters" — and a property holding at six sites in one suite plainly matters. A
+rule need not catch every instance of a defect to be worth running; the linter this repo
+ships catches none of the interesting prose defects and is still the reason five supersession
+errors got found. The error was treating "insufficient" as "not worth automating", which is
+the same reasoning that would delete a smoke detector for missing a flood.
+
+**What the rule must be, and what it must not be.** Scoped to *scalar constants imported
+from the module under test and used as an expected value*, it catches five of the six
+directly. Widened to "any value imported from `src/` used as an expected value" it catches
+the sixth too — and fires on **594 legitimate assertions** in that same suite, where
+`toBe(ItemId.Apple)` and `toBe(BlockId.Stone)` are exactly the right way to assert an
+enumerated result. That count is why the rule is scoped narrowly and why the collaborator
+variant stays review-only: the broad form is unshippable, not merely noisy.
+
+**This kit still does not ship the check.** `lint-docs.mjs` has no AST and gains none here;
+the check belongs to the consuming repo's own language tooling, as an ESLint rule in a
+TypeScript repo. Recording it as a `review-only` rule with a named mechanical subset is the
+change — the bar now says which part a repo can automate, instead of implying none of it can.
+boxel has no ESLint installed at all, so there the work is a toolchain addition rather than a
+rule addition, and it is logged in that repo's ledger as such.
+
+**The author committed the failure this ADR names, while writing this ADR's evidence up.**
+The eight sites first logged in boxel's ledger were taken from reviewer reports without
+opening all eight. Two of them (`hunger.test.ts:114`, `:124`) assert hand-written literals
+against MC's food table and are not instances of this defect at all; one line number was
+wrong by two; the total was reported as seven while eight were listed. Every error was found
+by reading the six real files, which took minutes. Decision 5's "citing the test basis is not
+the same as consulting it" therefore has a second instance, and its subject is this document:
+an aggregated report of other agents' findings is a writeup, and the rule against trusting a
+writeup does not exempt one's own.

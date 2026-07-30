@@ -2,7 +2,7 @@
 id: 0005
 title: Write routing and the bounds of assistant memory
 type: architecture
-status: accepted
+status: amended
 date: 2026-07-20
 supersedes: []
 superseded_by: []

@@ -82,12 +82,23 @@ For anything non-trivial, **present the options and their tradeoffs before build
     deciding vote.
   - **Citing the source is not the same as opening it.** The finding behind this rule was a
     test whose comment cited the reference implementation by class name and then stated the
-    wrong arithmetic. Read the source, not the writeup — including your own.
+    wrong arithmetic. Read the source, not the writeup — including your own. An aggregated
+    report of somebody else's findings is a writeup too.
+  - **Never assert a value the test imported from the module under test.** `expect(f(x)).toBe(K)`
+    where `K` comes from the module that produced it is the assertion `K === K`; it passes
+    whatever `K` is, including wrong. Write the number, and put the derivation in a comment.
+    This is the one part of this rule a machine can find, and in the suite that motivated it
+    the form appeared six times — more often than any other test-basis defect
+    (stele:ADR-0024). If this repo has an AST linter, it should carry the rule; scope it to
+    **scalar constants**, since asserting an imported *enum member* (`toBe(ItemId.Apple)`) is
+    correct and was 594 of the hits when the scope was widened.
 
 Neither instrument in the coverage layer detects a test derived from the implementation.
 `npm run mutants` cannot: such a test kills its mutant perfectly well, because mutating the
 constant breaks the test that asserts the constant (stele:ADR-0022). The adversarial pass in
-`/wrap-up` is the enforcement (stele:ADR-0017).
+`/wrap-up` is the enforcement (stele:ADR-0017) — except for the imported-constant form above,
+which is the rule's one mechanically checkable subset, and catching some instances of a defect
+beats catching none.
 
 ## 5. Finishing — `review-only`
 

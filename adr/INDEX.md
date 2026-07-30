@@ -12,7 +12,7 @@
 | 0002 | ADR frontmatter schema | accepted |
 | 0003 | Invariants are enforced by a hook, not by memory | amended |
 | 0004 | Verification harness and in-repo standing invariants | amended |
-| 0005 | Write routing and the bounds of assistant memory | accepted |
+| 0005 | Write routing and the bounds of assistant memory | amended |
 | 0006 | /init-method installs the kit, and refuses to install a hook that would brick the repo | amended |
 | 0008 | Where a hook framework already owns the pre-commit slot, the doc checks join it rather than fight for the file | accepted |
 | 0009 | A citation into another repo's corpus is qualified by repo name, and the linter skips it | accepted |
@@ -30,7 +30,7 @@
 | 0021 | The checked scope is one exported list, and no rule reads outside it | accepted |
 | 0022 | Mutation checking is a curated list in a wired script, and measures durability rather than correctness | accepted |
 | 0023 | Slash commands are vendored per repo, and an update overwrites only what the repo has not touched | accepted |
-| 0024 | The quality bar ships with the method, vendored into the repo, and tests derive from the spec rather than from the code | accepted |
+| 0024 | The quality bar ships with the method, vendored into the repo, and tests derive from the spec rather than from the code | amended |
 
 ## Slices
 
