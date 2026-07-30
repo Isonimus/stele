@@ -33,8 +33,11 @@ node scripts/init-method.mjs <target> --apply
 
 This scaffolds `adr/`, `CLAUDE.md` and `LEDGER.md` (never overwriting), vendors
 `lint-docs.mjs` / `build-index.mjs` / the hook and the slash commands, generates
-`adr/INDEX.md`, links `~/.claude/CLAUDE.md`, and installs the pre-commit hook **only if
-the corpus lints clean**.
+`adr/INDEX.md`, and installs the pre-commit hook **only if the corpus lints clean**.
+
+Nothing outside the target repo is written — never `$HOME`, never `~/.claude/CLAUDE.md`
+(stele:ADR-0016). Wiring the operator's machine-level conventions is a personal choice, not
+an install step; do not add it back as a convenience.
 
 The commands are vendored under softer rules than the machinery (stele:ADR-0023): a repo may
 edit its own copy of `/slice` or `/wrap-up` to say something repo-specific, and an
@@ -92,8 +95,8 @@ node scripts/init-method.mjs <target> --check
 ```
 
 Writes nothing; fails on a missing or broken hook, a drifted vendored **script**, a stale
-index, a red corpus, or a broken `~/.claude/CLAUDE.md` link. Report its output verbatim
-rather than summarising it as "installed".
+index, or a red corpus. Report its output verbatim rather than summarising it as
+"installed".
 
 `LOCAL` and `MISSING` lines are about commands only and are **not** failures — they say
 this repo adapted or declined one. Read them, mention them, do not "fix" them without
