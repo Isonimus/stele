@@ -39,7 +39,7 @@ Every document is exactly one kind. There is no fifth. ([ADR-0010](adr/0010-live
 | Kind | Files | Rule |
 |---|---|---|
 | **Immutable** | `adr/*.md`, `slices/*.md` | Written once. Body prose is never edited — only status/supersession fields change. |
-| **Generated** | `adr/INDEX.md` | Built from frontmatter by script. Never hand-edited. |
+| **Generated** | `adr/INDEX.md`, and this repo's `CHANGELOG.md` | Built by script — from frontmatter, or from git tags. Never hand-edited. |
 | **Mutable** | `LEDGER.md` | Exactly one per repo. The only file maintained by hand. |
 | **Live** | `README.md`, `docs/*` | Describes how something behaves *now*; updated in the same change as the code it describes. |
 
@@ -60,6 +60,60 @@ lines — an appended `## Amendment`, a correction marker placed at the claim it
 may never lose or rewrite one
 ([ADR-0019](adr/0019-immutable-bodies-may-gain-lines-never-lose-them.md)). Frontmatter stays
 free to change, because status and supersession are how a record announces it was superseded.
+
+---
+
+## The three formats
+
+Everything the linter enforces is one of these. They are small on purpose: a schema you can
+parse by hand is one you can also fix by hand at 6pm.
+
+**An ADR's frontmatter.** Eight fields, all required, closed vocabularies for `type` and
+`status` (R1–R3):
+
+```markdown
+---
+id: '0007'
+title: "Sessions are signed, not stored"
+type: architecture          # architecture | slice | batch
+status: accepted            # accepted | proposed | superseded | amended
+date: 2026-03-14            # a real calendar date; 2026-02-30 is rejected
+supersedes: []              # [0003] — and 0003 must point back (R4–R7)
+superseded_by: []
+---
+
+# ADR-0007 — Sessions are signed, not stored
+
+## Context
+## Decision
+## Consequences
+```
+
+**A ledger line.** One per item, and closing it means deleting the line (R8 checks the
+citation resolves):
+
+```markdown
+- [bug] Token refresh races when two tabs renew at once; the loser gets a 401 and no retry.
+  Reproduced on staging 2026-03-02 (ADR-0007).
+```
+
+`type` is `bug` | `feature` | `deferred` | `audit`.
+
+**A Definition of Done.** Acceptance criteria as Given/When/Then, written before the code
+(R13 requires a full triad, R12 requires `## Verification` alongside it):
+
+```markdown
+## Definition of Done
+
+- **Given** a session signed 25 hours ago
+  **When** the client calls any authenticated endpoint
+  **Then** the response is 401 and the body names `token_expired`
+
+## Verification
+
+`test/session-expiry.test.mjs`, plus `scripts/session-verify.mjs` for the clock-skew case a
+unit test cannot assert — wired into `package.json`, or R11 fails the commit.
+```
 
 ---
 
@@ -112,9 +166,12 @@ commands survive re-runs — including across an `--update`
 [ADR-0007](adr/0007-commands-are-vendored-and-adaptable.md)).
 
 `docs/quality-bar.md` rides the same rules. It is the standard a slice's
-`## Definition of Done` is measured against — no `any`, fail loud, no magic values, and the
+`## Definition of Done` is measured against — no `any`, fail loud, no magic values, the
 testing rule that a test derives from the spec and never from the code
-([ADR-0024](adr/0024-the-quality-bar-ships-with-the-method.md)). Shipping the demand for a
+([ADR-0024](adr/0024-the-quality-bar-ships-with-the-method.md)), and the rule that where a
+well-tested library or standard already covers the need it is proposed **by name** before any
+bespoke design, with a departure argued from a property it would cost *and* a measured build
+cost ([ADR-0025](adr/0025-the-established-solution-is-the-default.md)). Shipping the demand for a
 Definition of Done without the standard it is judged by left every consumer to supply the
 standard themselves. Adapt it freely: a repo whose stack has no `any` should cut that rule,
 and an `--update` keeps the cut.
@@ -122,7 +179,11 @@ and an `--update` keeps the cut.
 Almost all of it is **`review-only`** and says so in the file. No linter here can tell
 whether a test was derived from a specification or from the implementation it tests; that is
 what the adversarial pass in `/wrap-up` is for, and claiming otherwise would be the failure
-this kit exists to remove.
+this kit exists to remove. One subset *is* mechanical and the bar says so: a test asserting a
+constant it imported from the module under test is the assertion `K === K`, it passes whatever
+`K` is, and an AST linter can find it. Catching some instances of a defect beats catching
+none — the original claim that this was not worth checking was withdrawn by amendment after a
+wider count found six sites in one suite.
 
 ---
 
@@ -146,6 +207,7 @@ npm run lint       # node scripts/lint-docs.mjs .   — the invariant checker
 npm run index      # regenerate adr/INDEX.md
 npm run immutable  # immutable bodies only gained lines since HEAD
 npm run mutants    # do the tests actually bite? (mutation check)
+npm run changelog  # regenerate CHANGELOG.md from git tags (this repo only)
 npm test           # the regression suite (every rule has a fixture)
 ```
 
@@ -283,6 +345,24 @@ governs everything else.
 
 ---
 
+## What this kit does *not* install
+
+Stele publishes itself to npm, so it carries release machinery: annotated tags as release
+boundaries, a `CHANGELOG.md` generated from them, and [`docs/releasing.md`](docs/releasing.md)
+for the order of the steps. **None of it is installed into your repo, and no rule requires any
+of it.** Nor are `CONTRIBUTING.md`, `SECURITY.md`, a code of conduct or a PR template
+scaffolded ([ADR-0026](adr/0026-the-changelog-is-generated-and-release-engineering-stops-at-this-repo.md)).
+
+Three reasons, and the third is the one that decides it. Most repos using this kit publish
+nothing, so a release convention there is ceremony against nobody. `CLAUDE.md` and `LEDGER.md`
+*are* scaffolded because the method reads and writes them — community-health files are
+load-bearing for nothing it does, and adding them would make this a repo scaffolder, which
+GitHub already ships and tests better than we would. And `SECURITY.md` is a **promise** — a
+disclosure address, a response window. A missing one says "no stated policy", which is true;
+a templated one says something false to whoever reads it in the moment they rely on it.
+
+---
+
 ## Design principles
 
 - **Zero dependencies.** The whole kit is Node's standard library. It drops into any repo
@@ -292,7 +372,10 @@ governs everything else.
 - **Grammar over toolchain.** Given/When/Then is adopted as *writing discipline*, not a test
   framework — the verify scripts are the executable layer.
 - **The diff is the audit trail.** Immutable records, generated indexes, and single-writer
-  ledgers mean the git log *is* the history — no hand-maintained changelog to drift.
+  ledgers mean the git log *is* the history. This repo's own `CHANGELOG.md` follows from that
+  rather than sitting beside it: it is generated from annotated tags, never hand-written, so
+  there is no second copy of the facts to drift
+  ([ADR-0026](adr/0026-the-changelog-is-generated-and-release-engineering-stops-at-this-repo.md)).
 
 For the reasoning behind any of these, read the ADR it links to. That is what the ADRs are
 for.
