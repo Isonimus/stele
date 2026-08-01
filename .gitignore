@@ -1,1 +1,6 @@
 node_modules/
+
+# npm pack output. A build artifact is derivable from a tag, so version control has no
+# reason to carry one — isonimus-stele-0.2.0.tgz was tracked from 2026-07-27 until anyone
+# looked (2026-08-01), and a later `git add -A` came one timing accident from adding a second.
+*.tgz
