@@ -63,6 +63,11 @@ Run `/wrap-up` before finishing a task. It runs the linter and asks the three qu
 that actually get forgotten: did this change a user-facing API, record a decision, or
 defer something?
 
+Publishing follows [`docs/releasing.md`](docs/releasing.md) — the order there is a data
+dependency, not a preference, and `CHANGELOG.md` is generated from tags and never hand-edited
+(ADR-0026). None of it is installed into consumer repos: release engineering stops at this
+repo, and the reasoning that keeps `SECURITY.md` and friends out of a scaffold is in that ADR.
+
 The coverage layer has two instruments, and both state their limits. `npm run mutants`
 (ADR-0022) applies a curated list of behaviour changes to the linter's pure predicates and
 requires each to break a test — a survivor is correct behaviour nothing is watching, fixed

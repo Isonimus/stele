@@ -36,6 +36,10 @@ const IMMUTABLE = 'scripts/check-immutable.mjs';
  *  than the file it named. Recorded as a refinement, never a silent exception. */
 const INIT = 'scripts/init-method.mjs';
 
+/** The changelog's type classifier and its ordering are total and IO-free, so they fall in
+ *  the same scope as the linter's predicates — the git-reading half does not (ADR-0026). */
+const CHANGELOG = 'scripts/build-changelog.mjs';
+
 /**
  * The curated mutant list. Each entry names one behaviour and the smallest edit that
  * reverses it.
@@ -114,6 +118,18 @@ export const MUTANTS = [
     file: IMMUTABLE,
     find: 'if (cursor === now.length) return i;',
     replace: 'if (cursor > now.length) return i;',
+  },
+  {
+    label: 'commitType: accept a subject with no colon as conventional',
+    file: CHANGELOG,
+    find: "/^([a-z]+)(\\([^)]*\\))?!?:/",
+    replace: "/^([a-z]+)(\\([^)]*\\))?!?:?/",
+  },
+  {
+    label: 'typeRank: sort an unrecognised type first rather than last',
+    file: CHANGELOG,
+    find: 'return index === -1 ? TYPE_ORDER.length : index;',
+    replace: 'return index === -1 ? 0 : index;',
   },
   {
     label: 'firstLostLine: compare body lines loosely',

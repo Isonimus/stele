@@ -42,6 +42,7 @@
     "test": "node --test test/*.test.mjs",
     "lint": "node scripts/lint-docs.mjs .",
     "index": "node scripts/build-index.mjs .",
+    "changelog": "node scripts/build-changelog.mjs .",
     "immutable": "node scripts/check-immutable.mjs",
     "mutants": "node scripts/check-mutants.mjs",
     "scan": "node scripts/scan-legacy.mjs",

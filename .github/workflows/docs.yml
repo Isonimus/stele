@@ -37,5 +37,8 @@ jobs:
           else
             echo "::notice::no comparable base ref ($BASE) — immutability unchecked for this push"
           fi
+      # The changelog is generated from tags, so a tagged release that was not regenerated
+      # fails here rather than reaching a reader as a stale file (ADR-0026).
+      - run: node scripts/build-changelog.mjs --check .
       # The invariant checks are themselves tested.
       - run: node --test test/*.test.mjs

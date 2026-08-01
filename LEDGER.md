@@ -104,6 +104,15 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   logged. Zero rejected, so no code-site notes were needed. First run under the
   no-sub-delegation instruction this same commit adds to the brief; it read its own files,
   reproduced both findings with commands, and returned in one pass.
+  **Run 5 (2026-08-01, uncommitted ADR-0026 diff, Sonnet 5, correctness brief):** 3 findings,
+  all reproduced, all fixed — the highest count yet, and all three in the git-reading half of a
+  new generator whose pure half was already covered by tests and two mutants. A lightweight tag
+  was published as a release, contradicting the script's own header; an annotated tag on a blob
+  crashed with `fatal: ambiguous argument ''` and a stack trace; and a tagged branch merged in
+  later had its commits listed under two releases, which `--check` could never notice because it
+  compares the file against the same generator that produced it. Zero rejected. The pattern
+  across runs 4 and 5 is worth naming: both changes were reviewed *because* they added a check,
+  and in both the defect was in the checking code rather than in what it checked.
 - [bug] Every repo already running an install carries the twenty misrouted bare citations in
   its vendored `.claude/commands/*.md` and `CLAUDE.md` — gamatar and boxel both. Nothing in
   those repos can detect it, so each needs `/init-method --update` and a re-read of its
