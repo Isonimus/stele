@@ -14,8 +14,8 @@ at all**, and a build tarball had been sitting in version control since 2026-07-
 1.  npm run lint && npm test          the corpus is green and the suite passes
 2.  npm run index                     regenerate adr/INDEX.md; commit if it moved
 3.  edit package.json                 bump the version
-4.  commit                            the release commit
-5.  git tag -a vX.Y.Z -m "…"          the tag is the release boundary (ADR-0026)
+4.  commit                            the last commit before the tag
+5.  git tag -a vX.Y.Z -m "…"          on the commit being published (ADR-0026)
 6.  npm run changelog                 regenerate CHANGELOG.md from the new tag
 7.  commit                            "chore: changelog for vX.Y.Z"
 8.  git push && git push --tags       tag and history reach the remote together
@@ -27,10 +27,17 @@ at all**, and a build tarball had been sitting in version control since 2026-07-
 nothing else, so a tag that does not exist yet produces a changelog missing its own release.
 Tagging first is not a preference; it is the data dependency.
 
-**Why the changelog is a second commit.** The release commit is what the tag points at, and
-the changelog describes commits up to and including it — so it cannot be inside the thing it
-describes without changing the object it is trying to name. One extra commit is the cost of
-generating rather than hand-writing.
+**Why the changelog is a second commit, and why publish is one commit past the tag.** The
+changelog describes commits up to and including the tagged one, so it cannot live inside the
+object it is naming. `npm publish` therefore packs a tree one commit ahead of `vX.Y.Z` —
+identical to it but for `CHANGELOG.md`, which is the file that could not have been there. That
+skew is deliberate and bounded; anything else in the diff at step 9 means the release is not
+what the tag says it is.
+
+**Step 3 bumps the version, but step 5 tags the commit you are about to publish** — and on
+0.4.0 those were three commits apart, because work continued after the bump. `npm publish`
+packs the working tree, not the version-bump commit, so a tag left behind on the bump would
+name bytes nobody received. Bump last where you can; tag what ships where you cannot.
 
 **Why publish is last and by hand.** `npm publish` cannot be undone: a version number is burned
 even if the release is unpublished within the 72-hour window. Everything reversible happens

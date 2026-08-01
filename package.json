@@ -33,6 +33,7 @@
     ".claude/commands/",
     ".claude/hooks/",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "publishConfig": {
