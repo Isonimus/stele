@@ -70,6 +70,12 @@ release commit's subject, where the changelog will pick it up verbatim.
 
 ## If something goes wrong
 
+- **Anything changed after tagging, including docs:** do not move the tag. Bump a patch
+  version, tag that, and publish it instead — the working tree is what `npm publish` packs, so
+  a tree that has moved past the tag is no longer the release the tag names. This happened on
+  the first run of this procedure: `v0.4.0` was tagged, a README update followed, and `0.4.1`
+  was published in its place. `v0.4.0` stays in the history as a tagged release that was never
+  published, which the changelog shows and which is the honest record (`0.2.1` is the same).
 - **Tagged the wrong commit, not yet pushed:** `git tag -d vX.Y.Z`, retag, regenerate.
 - **Tagged and pushed the wrong commit:** do not move the tag. Tag the correction as the next
   patch version — a moved tag means two clones disagree about what a release was.
