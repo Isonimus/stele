@@ -82,8 +82,8 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   cheap because it reproduced each one. Notably the author had *prompted* the reviewer to
   check the exact question it caught, and had still shipped the draft: the value was not
   novel insight but an unmotivated reader acting on it.
-  One pre-existing crash it surfaced and correctly ruled out of scope is logged separately
-  below.
+  One pre-existing crash it surfaced and correctly ruled out of scope has since been fixed
+  (0.4.0), which is why no separate entry for it remains below.
   **Run 3 (2026-07-30, uncommitted ADR-0024 diff, Sonnet 5, correctness brief):** **zero
   findings.** The reviewer traced the five-state classifier over the new adaptable-doc path,
   installed into a scratch repo and committed through the resulting hook, checked the
@@ -93,16 +93,28 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   reported as one rather than padded. Nothing to reject, so no code-site notes were needed.
   Three runs now exist (2 real + 2 real + 0, against 7 correctly-dismissed), so the
   precondition on this item is met and the rule question is decidable.
+  **Run 4 (2026-07-31, uncommitted 0.4.0 diff, Sonnet 5, correctness brief):** 2 findings,
+  both reproduced, both fixed. The first is the sharpest result yet: the change under review
+  *was* a crash fix — a refusal replacing an `EISDIR` stack trace — and the reviewer found the
+  refusal itself threw a raw `ENOTDIR` when an ancestor of a managed path was a file, because
+  `throwIfNoEntry: false` suppresses `ENOENT` and nothing else. The same defect, reintroduced
+  one level up, inside its own fix, in two modes that write nothing and are advertised as safe
+  to run. The second was a pre-existing `EACCES` on an unreadable managed file, out of the
+  change's scope but inside the new function's stated claim, so it was fixed rather than
+  logged. Zero rejected, so no code-site notes were needed. First run under the
+  no-sub-delegation instruction this same commit adds to the brief; it read its own files,
+  reproduced both findings with commands, and returned in one pass.
 - [bug] Every repo already running an install carries the twenty misrouted bare citations in
   its vendored `.claude/commands/*.md` and `CLAUDE.md` — gamatar and boxel both. Nothing in
   those repos can detect it, so each needs `/init-method --update` and a re-read of its
   scaffolded `CLAUDE.md`, which `--update` does not overwrite (ADR-0020).
-- [bug] `/init-method` crashes with an uncaught `EISDIR`/`ELOOP` when a vendored path in the
-  target is a directory or a broken symlink instead of a file — `read()` is called on it with
-  no guard, in `vendor()`, `vendorAdaptable()` and `check()` alike. Pre-existing (the old
-  `matches()` had the identical failure) and surfaced by the ADR-0023 adversarial pass, which
-  correctly ruled it out of that change's scope. A refusal naming the path is the fix; a
-  stack trace tells the operator nothing about which file is wrong (ADR-0006).
+- [bug] The install preflight checks read permission only, so a managed file that is
+  readable but not writable passes it and then crashes with a bare `EACCES` from
+  `writeFileSync` — the same stack-trace-instead-of-a-path defect the preflight exists to
+  remove, on the write side. Not fixed with the read side because refusing on write
+  permission would reject a read-only vendored file that already matches the toolkit and
+  needs no write at all, which is a legitimate install; the fix is to check writability only
+  where a write is actually about to happen (ADR-0006).
 - [decision] `global/CLAUDE.md` and the shipped `docs/quality-bar.md` now carry the same
   rules twice. The shipped bar is the method's standard; the global file is the operator's
   personal one and governs repos with no install, so ADR-0024 deliberately left it alone
@@ -110,23 +122,6 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   file shrinks to identity and routing and cedes the bar to the method, or stays whole and
   the two are knowingly parallel. Neither is checkable, so whichever is chosen gets written
   down (ADR-0024, ADR-0005).
-- [bug] A delegated audit rubric that does not forbid sub-delegation has unbounded cost. The
-  2026-07-30 test-basis sweep fanned 12 reviewers into an estimated 40–50 agents — at least
-  six spawned their own children — and exhausted the month's API spend; eight batches died
-  mid-run and three returned `completed` with no report, each ending on a sentence about
-  waiting for children they never collected. The rubric forbade modifying files, padding
-  findings and reporting style nits, and never thought to forbid recursion. The control batch
-  read its own files (11 files, 176 cases, ~10 min) and produced the best report of the
-  twelve, so the partition size and the brief were sound and only the recursion was not.
-  Fix is one line in any brief that fans out — *read the files yourself; do not spawn
-  subagents* — and the place it belongs is `/wrap-up`'s adversarial-pass instructions plus any
-  future audit template, since both hand a brief to an agent that can spawn more (ADR-0017).
-- [bug] `/wrap-up`'s adversarial brief inherits the same hole and has simply never been fanned
-  out wide enough to hit it: it says "spawn one subagent (two only if…)" to the *caller* and
-  says nothing to the subagent about spawning further. One reviewer that decides to
-  parallelise is enough to reproduce the above at smaller scale. Blocked on nothing; it is a
-  sentence in the command, held back only so it lands with whatever decides the R16 question
-  rather than as its own commit (ADR-0017).
 - [deferred] Three of this repo's own reinventions predate the rule that now governs them and
   do not satisfy it: the doc linter (`adr-tools`, `log4brains`), the index generator, and the
   vendor/update mechanism (a package manager). ADR-0022 satisfies the rule for the mutation

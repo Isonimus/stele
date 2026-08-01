@@ -12,7 +12,7 @@
 // documents it would report "0 document(s) — ok" (the reason rule 10 exists), certifying
 // an install that checks nothing.
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, lstatSync, readlinkSync, symlinkSync, unlinkSync, readdirSync, realpathSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, lstatSync, statSync, accessSync, constants as fsConstants, readlinkSync, symlinkSync, unlinkSync, readdirSync, realpathSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -139,6 +139,76 @@ function isSymlink(path) {
     return lstatSync(path).isSymbolicLink();
   } catch {
     return false;
+  }
+}
+
+/**
+ * Managed paths in the target that exist but are not a file this tool can read and write.
+ *
+ * `existsSync` answers the wrong question twice, and every managed path lives in a repo we
+ * do not control. It is **true** for a directory, so the read crashes with an `EISDIR` that
+ * names `readFileSync` rather than the offending path; it is **false** for a symlink that
+ * does not resolve, so the path reads as *absent* — `--check` calls it missing and `--apply`
+ * writes straight through the link. Refusing by name is the fix, for the reason the hook
+ * install refuses rather than warns (ADR-0006): a stack trace tells the operator nothing
+ * about which file is wrong.
+ *
+ * `.git/hooks/pre-commit` is deliberately a symlink and is judged by installHook(), not here.
+ */
+function unusablePaths({ target, toolkit }) {
+  const managed = [
+    ...SCAFFOLD.map(([dest]) => dest),
+    ...VENDORED.map(([dest]) => dest),
+    ...adaptableFiles(toolkit),
+    join('adr', 'INDEX.md'),
+    PROVENANCE,
+    FRAMEWORK_CONFIG,
+  ];
+
+  return managed.flatMap((dest) => {
+    const path = join(target, dest);
+    let link;
+    try {
+      link = lstatSync(path, { throwIfNoEntry: false });
+    } catch (error) {
+      // throwIfNoEntry suppresses ENOENT and nothing else. ENOTDIR here means an ancestor
+      // exists as a file, so nothing at this path can be read, written or created — and
+      // pointing at the leaf would send the operator to the wrong file.
+      return [{ path, kind: error.code === 'ENOTDIR'
+        ? 'unreachable — a parent of it exists as a file rather than a directory'
+        : `cannot be inspected (${error.code})` }];
+    }
+    if (link === undefined) return []; // absent: the ordinary case
+    if (link.isFile()) return whenUnreadable(path);
+    if (!link.isSymbolicLink()) {
+      return [{ path, kind: link.isDirectory() ? 'a directory' : 'not a regular file' }];
+    }
+    // A symlink to a real file reads and writes fine, so it stays supported. statSync
+    // throws ELOOP on a cycle, which throwIfNoEntry does not suppress — the code it
+    // carries goes into the report rather than being discarded.
+    try {
+      if (statSync(path).isFile()) return whenUnreadable(path);
+      return [{ path, kind: `a symlink to ${readlinkSync(path)}, which is not a file` }];
+    } catch (error) {
+      return [{ path, kind: `a symlink to ${readlinkSync(path)} that cannot be resolved (${error.code})` }];
+    }
+  });
+}
+
+/**
+ * A file whose type is fine but whose permissions are not: `lstat` succeeds on a `chmod 000`
+ * file, and the read that follows throws a bare EACCES.
+ *
+ * Only readability is checked. Every managed path that exists is read unconditionally, while
+ * writes are conditional — so refusing on write permission too would reject a read-only
+ * vendored file that already matches the toolkit and needs no write at all.
+ */
+function whenUnreadable(path) {
+  try {
+    accessSync(path, fsConstants.R_OK);
+    return [];
+  } catch (error) {
+    return [{ path, kind: `unreadable (${error.code})` }];
   }
 }
 
@@ -478,6 +548,17 @@ export function initMethod({ target, toolkit = TOOLKIT, mode = 'install', apply 
   if (!existsSync(join(target, '.git'))) {
     report('problem', target, 'not a git repository — the hook has nowhere to live. Run `git init` first.');
     return { actions, problems: 1 };
+  }
+
+  // Before anything reads or writes, and in every mode: a partial install is worse than no
+  // install, and --check cannot judge a state it would crash on. Every offending path is
+  // named, not just the first, so one re-run is enough to clear them.
+  const unusable = unusablePaths({ target, toolkit });
+  if (unusable.length > 0) {
+    for (const { path, kind } of unusable) {
+      report('problem', path, `${kind} — this tool reads and writes it as a file. Move or remove it, then re-run.`);
+    }
+    return { actions, problems: unusable.length };
   }
 
   if (mode === 'check') {

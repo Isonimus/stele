@@ -35,6 +35,13 @@ get recorded until they have gone stale (stele:ADR-0003).
      edge cases, error paths, boundaries, ordering and partial-failure hazards; **cost** —
      complexity class, allocation, IO in loops). Sonnet 5 for correctness; announce the
      delegation before it starts (`~/.claude/CLAUDE.md` §6).
+   - **Tell the reviewer to read the files itself and not to spawn subagents of its own.** A
+     brief that fans out and does not forbid recursion has unbounded cost: a 12-reviewer sweep
+     on 2026-07-30 became an estimated 40–50 agents, exhausted a month's API budget, and lost
+     eight batches mid-run — while the one reviewer that read its own files returned the best
+     report of the twelve. One reviewer deciding to parallelise is enough to reproduce that at
+     smaller scale, so the sentence belongs in every brief, not only the wide ones
+     (stele:ADR-0017).
    - Brief it **blind to intent, aware of law**: give it the diff, this repo's `CLAUDE.md`,
      and `adr/INDEX.md`. Do *not* give it the conversation, your rationale, or the slice's
      claims about itself. A reviewer handed the reasoning returns the reasoning; one handed

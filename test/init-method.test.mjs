@@ -7,7 +7,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync, lstatSync, readlinkSync, readFileSync, appendFileSync, readdirSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync, lstatSync, readlinkSync, readFileSync, appendFileSync, readdirSync, symlinkSync, chmodSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
@@ -459,4 +459,70 @@ test('the CLI entry point runs when invoked through a symlink, as every npm bin 
 
   assert.ok(existsSync(join(target, 'CLAUDE.md')), 'main() ran: CLAUDE.md scaffolded');
   assert.ok(existsSync(join(target, '.git', 'hooks', 'pre-commit')), 'main() ran: hook installed');
+});
+
+// A vendored path in the target that is not a regular file (ADR-0006). Three distinct
+// failures, one per code path: `existsSync` is true for a directory, so the read crashes
+// with EISDIR naming readFileSync rather than the path; and it is false for a symlink that
+// does not resolve, so that path reads as *absent* — reported as missing by --check and
+// written straight through by --apply.
+
+test('a vendored path that is a directory is refused by name, not crashed on', () => {
+  const { target } = scratchRepo();
+  mkdirSync(join(target, 'scripts', 'lint-docs.mjs'), { recursive: true });
+
+  const { actions, problems } = run({ target, apply: true });
+
+  assert.ok(problems > 0);
+  assert.deepEqual(statuses(actions, join('scripts', 'lint-docs.mjs')), ['problem']);
+  assert.ok(actions.some((a) => a.path.endsWith(join('scripts', 'lint-docs.mjs')) && /directory/.test(a.message)));
+});
+
+test('--check reports a vendored symlink that does not resolve, rather than calling it missing', () => {
+  const { target } = scratchRepo();
+  mkdirSync(join(target, 'docs'), { recursive: true });
+  symlinkSync('./gone.md', join(target, 'docs', 'quality-bar.md'));
+
+  const { actions, problems } = run({ target, mode: 'check' });
+
+  assert.ok(problems > 0);
+  assert.deepEqual(statuses(actions, join('docs', 'quality-bar.md')), ['problem']);
+});
+
+test('an install refuses rather than writing through a symlink that does not resolve', () => {
+  const { target } = scratchRepo();
+  mkdirSync(join(target, 'docs'), { recursive: true });
+  symlinkSync('./gone.md', join(target, 'docs', 'quality-bar.md'));
+
+  const { problems } = run({ target, apply: true });
+
+  assert.ok(problems > 0);
+  assert.ok(lstatSync(join(target, 'docs', 'quality-bar.md')).isSymbolicLink(), 'the link is left alone');
+  assert.equal(existsSync(join(target, 'docs', 'gone.md')), false, 'nothing was written through it');
+});
+
+test('a managed path under a parent that is a file is refused, naming the parent as the problem', () => {
+  // Found by the ADR-0017 pass on the refusal above: `throwIfNoEntry: false` suppresses
+  // ENOENT and nothing else, so an ancestor that is a file threw a raw ENOTDIR out of the
+  // preflight itself — reintroducing, one level up, the stack trace the preflight exists to
+  // replace. Pointing at the leaf would send the operator to the wrong file.
+  const { target } = scratchRepo();
+  writeFileSync(join(target, 'scripts'), 'not a directory\n');
+
+  const { actions, problems } = run({ target, mode: 'check' });
+
+  assert.ok(problems > 0);
+  assert.ok(actions.some((a) => a.path.endsWith(join('scripts', 'lint-docs.mjs')) && /parent of it exists as a file/.test(a.message)));
+});
+
+test('a managed file that cannot be read is refused by name, not crashed on', { skip: process.getuid?.() === 0 && 'root can read a chmod 000 file' }, () => {
+  const { target } = scratchRepo();
+  mkdirSync(join(target, 'docs'), { recursive: true });
+  writeFileSync(join(target, 'docs', 'quality-bar.md'), 'a local bar\n');
+  chmodSync(join(target, 'docs', 'quality-bar.md'), 0o000);
+
+  const { actions, problems } = run({ target, mode: 'check' });
+
+  assert.ok(problems > 0);
+  assert.ok(actions.some((a) => a.path.endsWith(join('docs', 'quality-bar.md')) && /unreadable \(EACCES\)/.test(a.message)));
 });

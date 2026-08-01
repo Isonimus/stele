@@ -101,6 +101,11 @@ commit is the tool bricking the repo it was meant to protect. If a hook framewor
 owns the pre-commit slot, the doc checks join it rather than fight for the file
 ([ADR-0008](adr/0008-compose-with-an-existing-hook-framework.md)).
 
+It also refuses, by name, when a path it manages is not a file it can read and write — a
+directory where `CLAUDE.md` should be, or a symlink that does not resolve. Nothing is written
+in that state, in any mode: the alternative was an `EISDIR` stack trace naming `readFileSync`,
+or, for an unresolvable link, silently writing through it.
+
 The linter and slash commands are **vendored per repo** and a repo's local edits to the
 commands survive re-runs — including across an `--update`
 ([ADR-0023](adr/0023-vendored-commands-and-what-an-update-may-overwrite.md), superseding
