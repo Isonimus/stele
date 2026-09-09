@@ -41,6 +41,13 @@ repo's decision of that number; write `stele:ADR-NNNN` there, which the linter s
 resolves here (ADR-0020). An illustrative number in vendored text is a citation to the
 linter, so examples use the `NNNN` placeholder.
 
+The **git** hook and CI are the floor, and no invariant is enforced only by a Claude Code
+lifecycle hook (ADR-0027). A rule that must hold is a rule in the linter reading inside
+`READ_SCOPE`; a `.claude/settings.json` entry may only run a check that already exists there,
+because a rule in a client config fires for one client, is invisible to `--check`, and would
+turn the corpus green by being deleted. The lifecycle layer moves an existing check *earlier*
+and loads a document nothing opens — nothing else.
+
 `node scripts/lint-docs.mjs` checks fifteen rules and runs from a pre-commit hook and CI. The
 hook checks the **commit**, not the working tree (ADR-0018), and runs two checks the linter
 cannot: the generated index matches the corpus, and immutable bodies only ever gained lines

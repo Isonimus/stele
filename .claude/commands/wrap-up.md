@@ -58,7 +58,10 @@ get recorded until they have gone stale (stele:ADR-0003).
 
 4. Then answer these four out loud, and act on each:
    - **Did this change a user- or dev-facing API or feature?** If so, update `README.md`
-     (and any docs) in the same change — it is a live document.
+     (and any docs) in the same change — it is a live document. A **hand-maintained**
+     `CHANGELOG.md` is a live doc too and gets its entry now. A **generated** one — built
+     from tags, as in the repo that ships this kit (stele:ADR-0026) — is never hand-edited:
+     regenerating it is a release step, and an edit here fails that repo's own `--check`.
    - **Did this make a decision later work must obey?** If so, write it with `/adr` now,
      while the reasoning is fresh. An unrecorded decision is re-litigated later from
      nobody's memory.

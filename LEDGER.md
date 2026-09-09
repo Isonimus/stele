@@ -26,6 +26,21 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   floor that hides a genuine fourth. That needs R9 to parse the marker and suppress the
   corrected id for that document, plus fixtures and a mutant. Until it ships the floor is 3,
   and `/audit` cannot tell a new warning from a standing one (ADR-0009, ADR-0019).
+- [feature] Build the Claude Code hook layer whose boundary ADR-0027 fixes: a `PostToolUse`
+  script re-running the linter on `Edit|Write` inside the checked scope (stderr, exit 2), a
+  `SessionStart` digest under a ~1k-token cap, and an opt-in installer step that merges into
+  `hooks.<Event>[]` idempotently and refuses unparseable JSON. **First step is a measurement,
+  not code:** the ADR's mechanism is read off the documented contract, so prove in a scratch
+  repo that a project-level `PostToolUse` entry fires *beside* the user-level handler (this
+  machine dispatches 11 events into one external handler) and that its exit-2 stderr actually
+  reaches the model. If either is false the design changes before anything is built (ADR-0027).
+- [decision] How the hook layer is delivered is unsettled: vendored `.claude/settings.json`
+  merged by `/init-method`, or a Claude Code plugin carrying `hooks/hooks.json` plus the
+  commands. A plugin is the platform's own answer and so is ADR-0025's default, but it moves
+  the commands out of the repo tree and takes the per-repo adaptation of ADR-0023 with them —
+  which is a real loss, since a Python repo cutting the rule about `any` is use, not drift.
+  Decide before building the installer half, because the two produce different reconciliation
+  problems (ADR-0027, ADR-0015, ADR-0023).
 - [deferred] `slices/` directory and the ADR/slice split apply to **new** documents only.
   boxel's existing 130 keep `type:` in frontmatter instead — a physical split would
   rewrite 567 cross-references for no additional query power (ADR-0002).
