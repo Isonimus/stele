@@ -42,3 +42,8 @@ jobs:
       - run: node scripts/build-changelog.mjs --check .
       # The invariant checks are themselves tested.
       - run: node --test test/*.test.mjs
+      # Do the tests bite? A curated behaviour change to each of the linter's pure
+      # predicates must break a test (ADR-0022). Its only trigger was a /wrap-up bullet
+      # gated on the author's own judgement of whether the change was in scope, which is
+      # the enforcement-by-memory this project exists to remove (ADR-0003). ~35s.
+      - run: node scripts/check-mutants.mjs
