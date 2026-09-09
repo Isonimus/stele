@@ -68,8 +68,20 @@ export const MUTANTS = [
   {
     label: 'citableText: stop stripping URLs before matching citations',
     file: LINTER,
-    find: "text.replace(/\\]\\([^)]*\\)/g, ']()').replace(/\\S*:\\/\\/\\S*/g, '')",
-    replace: "text.replace(/\\]\\([^)]*\\)/g, ']()')",
+    find: ".replace(/\\S*:\\/\\/\\S*/g, '')",
+    replace: '',
+  },
+  {
+    label: 'citableText: stop stripping code spans before matching citations',
+    file: LINTER,
+    find: "text.replace(CODE_SPAN, '')",
+    replace: 'text',
+  },
+  {
+    label: 'CODE_SPAN: let a span cross lines, so one stray backtick swallows the body',
+    file: LINTER,
+    find: 'const CODE_SPAN = /(`+)(?:(?!\\1)[^\\n])*?\\1/g;',
+    replace: 'const CODE_SPAN = /(`+)(?:(?!\\1)[\\s\\S])*?\\1/g;',
   },
   {
     label: 'inReadScope: drop the exact-match branch, keeping only the prefix',

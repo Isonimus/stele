@@ -157,6 +157,30 @@ test('R8/R14 do not read an ordinal inside a URL as a citation', () => {
   assert.deepEqual(warnings('r14-url-not-a-citation'), []);
 });
 
+test('R8/R9/R14 read a backticked citation as a mention of the form, not a use of it', () => {
+  // A method whose subject *is* citations quotes citation syntax constantly, so the URL
+  // coincidence recurs in a form the corpus invites. Measured 2026-09-09: three of this
+  // repo's six standing R9 warnings were backticked mentions, every one inside an immutable
+  // body — unfixable at the source under ADR-0019, so the floor could never reach zero and
+  // a genuine seventh warning had nowhere to show.
+  //
+  // The fixture pins the boundary, not just the fix. The bare `ADR 0777` still warns and
+  // ADR-0888 inside a *fence* still errors: CLAUDE.md requires the NNNN placeholder for an
+  // illustrative number precisely because the linter reads examples, so exempting fences
+  // would retire that rule silently. Mention-versus-use splits on the span, not the fence.
+  // The stray backtick in the same body pins the line bound — unbounded, it swallows
+  // `ADR 0777` and the warning disappears.
+  assert.deepEqual(errors('r14-code-span-not-a-citation'), ['R14']);
+  assert.deepEqual(warnings('r14-code-span-not-a-citation'), ['R9']);
+  // Which id warns, not just that one did. An unbounded span swallows `ADR 0777` and
+  // re-exposes a later mention as it goes, so the count stays at one while the finding
+  // changes underneath it — the first draft of this fixture died to exactly that.
+  assert.match(
+    lint(fixture('r14-code-span-not-a-citation')).findings.find((f) => f.severity === 'warn').message,
+    /ADR 0777/,
+  );
+});
+
 test('R15 catches relative links with no file behind them, in a directory or at the root', () => {
   // Two findings, one per branch of the scope test: `docs/design.md` matches a scope entry
   // by directory prefix, `LEDGER.md` matches one exactly. The exact-match branch was

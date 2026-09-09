@@ -93,7 +93,19 @@ function isCalendarDate(v) {
 const CITATION = /(?:([A-Za-z][\w.-]*):)?ADR[-\s](\d{1,4})/g;
 
 /**
- * `text` with link destinations and URLs removed, so only prose is scanned for citations.
+ * An inline code span: a run of backticks, its content, and the matching closing run.
+ *
+ * Bounded to one line, which is not CommonMark's rule — a code span may legally wrap. The
+ * bound is what contains the damage from an *unmatched* backtick: unbounded, one stray
+ * tick swallows the rest of the document and every citation in it goes unchecked, which
+ * on a rule of error severity means a rotted reference passing as green. Multi-line code
+ * is written as a fence in this corpus anyway, and fences are deliberately in scope below.
+ */
+const CODE_SPAN = /(`+)(?:(?!\1)[^\n])*?\1/g;
+
+/**
+ * `text` with code spans, link destinations and URLs removed, so only prose is scanned for
+ * citations.
  *
  * A URL path can contain an `ADR-1234`-shaped run that cites nothing —
  * `https://example.com/docs/ADR-9999`, or a ticket link. Rules 8 and 14 are error severity,
@@ -101,9 +113,23 @@ const CITATION = /(?:([A-Za-z][\w.-]*):)?ADR[-\s](\d{1,4})/g;
  * unusable: the `<repo>:` qualifier cannot be written inside a URL. Link *text* is kept,
  * because `[ADR-0020](adr/0020-….md)` is a citation and rule 15 checks the target
  * separately.
+ *
+ * A code span is the same coincidence in the form this method invites constantly: a repo
+ * whose subject *is* citations quotes citation syntax in prose, and the quotation is a
+ * mention of the form, never a use of the reference. Measured here on 2026-09-09 — three
+ * of six standing R9 warnings were backticked mentions (`ADR 0119` quoting boxel's
+ * correction marker, `ADR 0123` quoting the shape of a bare reference, `ADR-0134` naming a
+ * form that was rejected), and every one sat in an immutable body, so ADR-0019 left them
+ * permanently unfixable at the source. A warning floor nothing can clear is how a genuine
+ * seventh warning becomes invisible.
+ *
+ * Fenced blocks are deliberately NOT stripped. CLAUDE.md §2 requires an illustrative
+ * number in vendored text to use the `NNNN` placeholder precisely because the linter reads
+ * examples; exempting fences would retire that rule silently, and a template that cites a
+ * real decision is citing it. Mention-versus-use splits on the span, not on the fence.
  */
 const citableText = (text) =>
-  text.replace(/\]\([^)]*\)/g, ']()').replace(/\S*:\/\/\S*/g, '');
+  text.replace(CODE_SPAN, '').replace(/\]\([^)]*\)/g, ']()').replace(/\S*:\/\/\S*/g, '');
 
 /**
  * Ids cited in `text` that this repo is expected to own — cross-repo refs skipped.
@@ -648,6 +674,6 @@ function main(argv) {
 
 // realpath, not a string compare on argv[1]: invoked through a bin symlink the naive form
 // silently does nothing, which is how `npx stele` shipped as a no-op (ADR-0015).
-if (realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   process.exit(main(process.argv.slice(2)));
 }
