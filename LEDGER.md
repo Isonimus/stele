@@ -18,6 +18,14 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   is migrated and the true failure rate is known (ADR-0003). The cross-repo obstacle is
   gone: a bare reference now means unambiguously "in this repo" (ADR-0009), so what
   remains is boxel's legacy volume alone.
+- [deferred] Three bare cross-repo citations still warn under R9 — `ADR 0122` in ADR-0003,
+  `ADR 0121` and `ADR 0101` in ADR-0004 — and all three name boxel's corpus, so ADR-0009
+  requires `boxel:ADR-NNNN`. They sit in immutable bodies, so the source line cannot be
+  corrected (ADR-0019). Decided 2026-09-09: the correction is an **inline marker on the line
+  following the claim**, machine-read, so the warning clears rather than persisting as a
+  floor that hides a genuine fourth. That needs R9 to parse the marker and suppress the
+  corrected id for that document, plus fixtures and a mutant. Until it ships the floor is 3,
+  and `/audit` cannot tell a new warning from a standing one (ADR-0009, ADR-0019).
 - [deferred] `slices/` directory and the ADR/slice split apply to **new** documents only.
   boxel's existing 130 keep `type:` in frontmatter instead — a physical split would
   rewrite 567 cross-references for no additional query power (ADR-0002).
@@ -145,6 +153,8 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
 
 ## Resolved
 
-Entries move out of "Open" by deletion. Root-cause writeups worth keeping belong in the
-ADR or slice doc that fixed the problem, not here — this file is a worklist, not a
-changelog.
+Entries move out of "Open" by deletion. A narrative of what merely *happened* belongs in
+the git log; what belongs on an open item is evidence it cannot be re-derived later —
+a measured result, a reproduction, a finding-to-noise count the eventual decision turns
+on. Keep that with the item while it is open, and move it into the ADR or slice that
+closes it. What this file is not is a record of completed work.

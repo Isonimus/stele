@@ -20,5 +20,8 @@ open that corpus, so it skips qualified references (stele:ADR-0009).
 
 ## Resolved
 
-Entries move out of "Open" by deletion. Root-cause writeups worth keeping belong in the
-ADR that fixed the problem, not here — this file is a worklist, not a changelog.
+Entries move out of "Open" by deletion. A narrative of what merely *happened* belongs in
+the git log; what belongs on an open item is evidence it cannot be re-derived later — a
+measured result, a reproduction, a count the eventual decision turns on. Keep that with
+the item while it is open, and move it into the ADR that closes it. What this file is not
+is a record of completed work.
