@@ -59,7 +59,7 @@ supersession defects sat undetected in boxel for weeks because nothing ran. If a
 convention matters, it gets a rule; if it can't be checked, say so out loud rather than
 writing it down and trusting it.
 
-Run `/wrap-up` before finishing a task. It runs the linter and asks the three questions
+Run `/wrap-up` before finishing a task. It runs the linter and asks the four questions
 that actually get forgotten: did this change a user-facing API, record a decision, or
 defer something?
 
