@@ -2,7 +2,7 @@
 id: '0022'
 title: "Mutation checking is a curated list in a wired script, and measures durability rather than correctness"
 type: architecture
-status: accepted
+status: amended
 date: 2026-07-28
 supersedes: []
 superseded_by: []

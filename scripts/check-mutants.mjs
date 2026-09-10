@@ -8,10 +8,12 @@
 // unpinned and a refactor could reverse it in silence. Exit 1 if any non-exempt mutant
 // survives.
 //
-// Scope is deliberately narrow: the total, IO-free predicates in lint-docs.mjs and
-// check-immutable.mjs. Every subtle-logic defect this repo has had lived in that class.
-// init-method.mjs is excluded — its behaviour is pinned by real-filesystem fixtures, where
-// a mutant mostly proves the filesystem still works — and the hook is shell, not JS.
+// Scope is the class of decision a mutant can prove, not a list of files (ADR-0028,
+// amending ADR-0022): an entry belongs here when it reverses a decision the code makes and
+// the test that should notice is a test of that decision. What stays out is a mutant that
+// would mostly prove the filesystem, the network or git still works — init-method's
+// copy-and-symlink behaviour, the git-reading half of build-changelog. The pre-commit hook
+// is shell, not JS, so it is out for a different reason entirely.
 //
 // What this does NOT buy, stated so a green run is not read as more than it is: none of the
 // three defects this repo has actually suffered would have been caught. Two were missing
@@ -30,15 +32,25 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const LINTER = 'scripts/lint-docs.mjs';
 const IMMUTABLE = 'scripts/check-immutable.mjs';
 
-/** ADR-0022 excluded init-method.mjs wholesale, reasoning that a mutant there mostly proves
- *  the filesystem still works. `classifyVendored` (ADR-0023) is the first total, IO-free
- *  predicate in that file, so it falls inside the scope ADR-0022 actually described rather
- *  than the file it named. Recorded as a refinement, never a silent exception. */
+/** Only `classifyVendored` (ADR-0023) is in scope here — it reverses a verdict, where a
+ *  mutant over the installer's copy-and-symlink work would mostly prove the filesystem
+ *  still works (ADR-0028, clause 2). */
 const INIT = 'scripts/init-method.mjs';
 
 /** The changelog's type classifier and its ordering are total and IO-free, so they fall in
  *  the same scope as the linter's predicates — the git-reading half does not (ADR-0026). */
 const CHANGELOG = 'scripts/build-changelog.mjs';
+
+/**
+ * The Claude Code lifecycle hooks (ADR-0027). These read the filesystem, and are in scope
+ * because each mutant below reverses a decision rather than the file read that carries it
+ * (ADR-0028).
+ *
+ * They earn the runtime: this layer is advisory by ADR-0027, so a defect here is not caught
+ * by a red build the way a linter defect is — it is caught by nobody.
+ */
+const HOOK_LINT = '.claude/hooks/post-tool-lint.mjs';
+const HOOK_DIGEST = '.claude/hooks/session-digest.mjs';
 
 /**
  * The curated mutant list. Each entry names one behaviour and the smallest edit that
@@ -142,6 +154,60 @@ export const MUTANTS = [
     file: CHANGELOG,
     find: 'return index === -1 ? TYPE_ORDER.length : index;',
     replace: 'return index === -1 ? 0 : index;',
+  },
+  {
+    label: 'post-tool-lint: drop the read-scope gate, so any edit lints the whole corpus',
+    file: HOOK_LINT,
+    find: "if (editedRelative !== null && !inReadScope(editedRelative)) return { exitCode: 0, stderr: '' };",
+    replace: '',
+  },
+  {
+    label: 'post-tool-lint: gate on any file path, absolute or not',
+    file: HOOK_LINT,
+    find: "typeof edited === 'string' && isAbsolute(edited)",
+    replace: "typeof edited === 'string'",
+  },
+  {
+    label: 'post-tool-lint: block on warnings as well as errors',
+    file: HOOK_LINT,
+    find: "f.severity === 'error'",
+    replace: "f.severity !== 'error'",
+  },
+  {
+    label: 'post-tool-lint: print every finding instead of capping the list',
+    file: HOOK_LINT,
+    find: 'ranked.slice(0, MAX_FINDINGS_SHOWN)',
+    replace: 'ranked.slice(0)',
+  },
+  {
+    label: "post-tool-lint: report in corpus order, not the edited file's findings first",
+    file: HOOK_LINT,
+    find: 'const ranked = [...errors.filter(isEdited), ...errors.filter((f) => !isEdited(f))];',
+    replace: 'const ranked = [...errors];',
+  },
+  {
+    label: 'session-digest: stop making room for the truncation notice',
+    file: HOOK_DIGEST,
+    find: 'used + Buffer.byteLength(notice(items.length - kept)) > DIGEST_BUDGET_BYTES',
+    replace: 'false',
+  },
+  {
+    label: "session-digest: leave the digest's trailing newline out of the budget",
+    file: HOOK_DIGEST,
+    find: 'const fixed = Buffer.byteLength(head) + Buffer.byteLength(tail) + 1;',
+    replace: 'const fixed = Buffer.byteLength(head) + Buffer.byteLength(tail);',
+  },
+  {
+    label: 'session-digest: read every section, so resolved items are injected as open work',
+    file: HOOK_DIGEST,
+    find: "inOpen = line.trim() === '## Open';",
+    replace: 'inOpen = true;',
+  },
+  {
+    label: 'session-digest: unanchor the item pattern, so a sub-item counts as an item',
+    file: HOOK_DIGEST,
+    find: "/^- \\[[a-z]+\\] /.test(line)",
+    replace: "/- \\[[a-z]+\\] /.test(line)",
   },
   {
     label: 'firstLostLine: compare body lines loosely',
