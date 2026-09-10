@@ -111,6 +111,44 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   rule 8. Blocked on settling a repo-specific file scope — what counts as source, what is
   vendored/generated and skipped — which the document tree does not have. Decide the scope,
   then ship the rule; until then the presence half is review-only via `/wrap-up` (ADR-0012).
+- [bug] R8/R14 and the immutable-body check silently skip **every** qualified citation in a
+  repo with no `package.json`. `repoName()` in `scripts/lint-docs.mjs` returns null without a
+  manifest, and `localCitations` then yields only unqualified ids, so a self-qualified
+  citation with an id that does not exist passes green. Measured in `dupin` 2026-09-10
+  (C++/PlatformIO firmware, no manifest by decision, cites `dupin:ADR-0002`): the qualifier
+  ADR-0020 introduced to keep vendored citations checkable is exactly what stops being
+  checked, in the repos that most need the qualifier. Every fallback has its own cost worth
+  arguing on its own terms — a git-remote basename needs a remote, a directory basename means
+  a clone renamed on disk stops recognising itself, an explicit field needs somewhere to live
+  in a repo that declined a manifest — so this is a citation-rule decision, not a harness one.
+  Do not fold it into the R11 item below: that one is a trap for a file that does not exist
+  yet, this one is unenforced today (ADR-0009, ADR-0020).
+- [bug] R11 (`harnessWiring`) enforces nothing in a repo with no `package.json` — it returns
+  early on the missing manifest, so an unwired `*-verify.mjs` sitting in `scripts/` reports
+  green. The ADR-0021 shape again: the rule shipped, the file it reads was never there.
+  Measured in `dupin` 2026-09-10, whose single named entry point is a `Makefile`; it has no
+  verify scripts today, so the hole is a trap laid for the first one — the state ADR-0004 was
+  written against. It cannot be fixed downstream: `scripts/` and `.claude/hooks/` appear
+  nowhere in `.claude/.stele-vendored.json`, so `--update` re-copies the linter unconditionally
+  and a local edit is drift, not adaptation (ADR-0006). Design settled 2026-09-10, replacing
+  the handoff brief this entry absorbs: **wired means the basename appears in a declared
+  entry-point file**, whichever file that is, token-scanned whole on the same separator the npm
+  branch splits on — *not* a recipe-line parser per format. A Makefile grammar misses
+  `VERIFY := scripts/a-verify.mjs` used as `$(VERIFY)`, a wrong red, to buy protection against
+  a basename mentioned but not run, which is rare and benign; and it buys that once per runner,
+  with `justfile`, `Taskfile.yml`, `Rakefile` and `pyproject.toml` each wanting their own ten
+  lines, which is the surface ADR-0025 exists to argue about. Scanning the whole file also
+  collapses the "neither entry-point file exists" case into the rule itself. Keep the
+  `pkg.scripts` branch as it is: it is more precise than a whole-file scan of JSON and already
+  covered. Both scope lists gain the entry-point filenames — `READ_SCOPE` and the `git archive`
+  list in `.claude/hooks/pre-commit`, held equal by `test/read-set.test.mjs` — or the hook
+  grades a file it never extracted (ADR-0021, ADR-0018); tests come from the spec, not the
+  implementation (ADR-0024). Carrying it downstream needs `--update`, which also clears two
+  vendored fixes `dupin` is behind on, after which `dupin` flips its invariant 2 from pending
+  to a `verified_by` declaration. Related, found while measuring: `dupin`'s vendored comments
+  in both files promise a `test/read-set.test.mjs` that does not exist there and could not run
+  if it did (its `test/` holds Unity suites) — a vendored comment claiming a guard the
+  installed repo lacks is the same class of defect as the inert rule (ADR-0004).
 - [feature] Build `scripts/gen-capability-index.mjs`: a best-effort, zero-dependency scanner
   that reads exported functions/classes/constants and emits `docs/CAPABILITIES.md` (a
   Generated doc), so an assistant can grep what reusable logic exists before writing its own.
