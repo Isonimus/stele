@@ -29,18 +29,53 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
 - [feature] Build the Claude Code hook layer whose boundary ADR-0027 fixes: a `PostToolUse`
   script re-running the linter on `Edit|Write` inside the checked scope (stderr, exit 2), a
   `SessionStart` digest under a ~1k-token cap, and an opt-in installer step that merges into
-  `hooks.<Event>[]` idempotently and refuses unparseable JSON. **First step is a measurement,
-  not code:** the ADR's mechanism is read off the documented contract, so prove in a scratch
-  repo that a project-level `PostToolUse` entry fires *beside* the user-level handler (this
-  machine dispatches 11 events into one external handler) and that its exit-2 stderr actually
-  reaches the model. If either is false the design changes before anything is built (ADR-0027).
-- [decision] How the hook layer is delivered is unsettled: vendored `.claude/settings.json`
-  merged by `/init-method`, or a Claude Code plugin carrying `hooks/hooks.json` plus the
-  commands. A plugin is the platform's own answer and so is ADR-0025's default, but it moves
-  the commands out of the repo tree and takes the per-repo adaptation of ADR-0023 with them —
-  which is a real loss, since a Python repo cutting the rule about `any` is use, not drift.
-  Decide before building the installer half, because the two produce different reconciliation
-  problems (ADR-0027, ADR-0015, ADR-0023).
+  `hooks.<Event>[]` idempotently and refuses unparseable JSON. The measurement the ADR made a
+  precondition **is done** (2026-09-09, three `claude -p` runs against scratch repos, client
+  2.1.236) and the mechanism holds, so the design stands and the build can start:
+  - A project-scope `PostToolUse` entry fires *beside* the user-scope one, and both matchers
+    match the same call: a repo declaring `Edit|Write` and `*` logged two firings per `Write`
+    and per `Edit`. A `SessionStart` run showed two `hook_started` events where the project
+    declared one and the operator's user settings declared one, against a control run that
+    declared none and showed exactly one. Nothing displaces anything, so ADR-0008's
+    fight-for-the-slot problem does not arise for a JSON key — only the *file* is contested.
+  - Exit-2 stderr does reach the model, as a transcript `attachment` of type
+    `hook_blocking_error` carrying the text verbatim under `hookName: "PostToolUse:Write"`.
+  - `SessionStart` stdout is injected, and re-fires on resume (`source: "resume"`) re-injecting
+    the whole payload — which is what makes ADR-0027's token cap a cap on a *recurring* cost.
+  - **New fact the ADR does not contain, and the sharpest reason for its boundary:** that
+    feedback is advisory, not a gate. The tool result stays `is_error: false` and the write
+    stands; whether anything follows is the model's judgement. Given a legitimate check
+    (a missing required frontmatter key) the model complied silently and the re-run went
+    green — the fast path works. Given a demand that conflicted with the user's instruction it
+    refused, reasoning in the open: *"This appears to be a test hook that's trying to get me to
+    violate the user's explicit instruction."* Correct behaviour, and exactly why an invariant
+    cannot live here: ADR-0027 argued that from client-agnosticism, and in-client discretion is
+    the second, independent reason.
+  - Testability constraint for the build: `PostToolUse` hook activity is **invisible** to
+    `--output-format stream-json` (only `SessionStart` surfaces there), so a test asserts on the
+    hook script's own side effects or reads the session transcript, never on the stream.
+  - Built 2026-09-09: `.claude/hooks/post-tool-lint.mjs` (asks the linter's own `inReadScope`
+    rather than restating the list) and `.claude/hooks/session-digest.mjs` (1,869 bytes / ~470
+    tokens against a 4,000-byte cap, where the whole ledger is 15,691). Wired for this repo in
+    `.claude/settings.json` on 2026-09-10 and verified live — both `SessionStart` entries fire,
+    the operator's and this repo's, and the digest reaches the session. An adversarial pass
+    (ADR-0017) found and fixed two defects in them first: the cap hid the edit's own error on a
+    corpus deeper than ten errors, and the digest dropped an item that fitted and then blamed
+    the budget for it.
+  - **What is left is the installer half only**, and it still waits on the delivery decision
+    below. `.claude/settings.json` is deliberately absent from `package.json` `files`, so
+    nothing reaches a consumer repo until that step exists (ADR-0027 clause 5).
+- [decision] The hook layer is delivered as a vendored `.claude/settings.json` merged by
+  `/init-method` — decided 2026-09-10, and **provisional on purpose.** The alternative is a
+  Claude Code plugin carrying `hooks/hooks.json` plus the commands; a plugin is the platform's
+  own answer and therefore ADR-0025's default, but it moves the commands out of the repo tree
+  and takes the per-repo adaptation of ADR-0023 with them, which is a real loss since a Python
+  repo cutting the rule about `any` is use, not drift. **This is not yet an ADR, and cannot be
+  one as it stands:** ADR-0025 requires a departure from the established solution to be argued
+  with a named cost *and a measured build*, and no plugin has been built or measured. Either
+  spend an hour proving what a plugin actually costs in adaptation, or write the ADR admitting
+  the choice was made on reasoning alone and say so — never a silent exception (ADR-0027,
+  ADR-0015, ADR-0023, ADR-0025).
 - [deferred] `slices/` directory and the ADR/slice split apply to **new** documents only.
   boxel's existing 130 keep `type:` in frontmatter instead — a physical split would
   rewrite 567 cross-references for no additional query power (ADR-0002).

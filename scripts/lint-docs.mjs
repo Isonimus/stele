@@ -42,8 +42,13 @@ export const READ_SCOPE = [
 
 /** Whether a root-relative path lies inside the checked scope. Outside it, the hook and a
  *  working-tree run would disagree, and a check that depends on where it runs is worse
- *  than no check. */
-function inReadScope(rootRelative) {
+ *  than no check.
+ *
+ *  Exported because `.claude/hooks/post-tool-lint.mjs` needs the same answer to decide
+ *  whether an edit could have changed this linter's verdict. It asks rather than restating
+ *  the list: a second copy is how R14/R15 came to read four paths the hook never extracted
+ *  (ADR-0021). */
+export function inReadScope(rootRelative) {
   if (rootRelative.startsWith('..')) return false;
   return READ_SCOPE.some((entry) => rootRelative === entry || rootRelative.startsWith(`${entry}/`));
 }

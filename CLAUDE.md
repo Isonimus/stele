@@ -46,7 +46,12 @@ lifecycle hook (ADR-0027). A rule that must hold is a rule in the linter reading
 `READ_SCOPE`; a `.claude/settings.json` entry may only run a check that already exists there,
 because a rule in a client config fires for one client, is invisible to `--check`, and would
 turn the corpus green by being deleted. The lifecycle layer moves an existing check *earlier*
-and loads a document nothing opens — nothing else.
+and loads a document nothing opens — nothing else. This repo wires it for itself in
+`.claude/settings.json`: a `PostToolUse` entry re-runs the same linter after `Edit|Write`
+inside `READ_SCOPE` and reports through exit 2, the only channel that reaches the model, and a
+`SessionStart` entry injects `LEDGER.md`'s open items under a stated byte budget. Neither is
+installed into a consumer repo, and a repo with the layer off is enforced exactly as one with
+it on.
 
 `node scripts/lint-docs.mjs` checks fifteen rules and runs from a pre-commit hook and CI. The
 hook checks the **commit**, not the working tree (ADR-0018), and runs two checks the linter
