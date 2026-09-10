@@ -34,14 +34,21 @@ const BARE_CITATION = /(^|[^:\w.-])(ADR[-\s]\d{1,4})/g;
  *  read-scope failure of ADR-0021: the rule shipped, the second list did not, and the check
  *  reported green over files nobody was reading. */
 function vendoredTextFiles() {
-  const dirs = ['.claude/commands', 'templates'];
+  const proseDirs = ['.claude/commands', 'templates'];
   return [
-    ...dirs.flatMap((dir) =>
+    ...proseDirs.flatMap((dir) =>
       readdirSync(join(ROOT, dir))
         .filter((name) => name.endsWith('.md'))
         .sort()
         .map((name) => join(dir, name)),
     ),
+    // `.claude/hooks/` is vendored too — `pre-commit` is in the installer's byte-identical
+    // VENDORED list — and its citations live in comments, read by the operator working out
+    // why a commit was blocked. That is precisely when a citation pointing at the wrong
+    // record costs the most. Every file rather than the `.md` filter above: there is no
+    // `.md` among them, which is how the directory stayed outside this guard while the
+    // defect it describes sat in the hook's own header.
+    ...readdirSync(join(ROOT, '.claude/hooks')).sort().map((name) => join('.claude/hooks', name)),
     ...ADAPTABLE_DOCS,
   ];
 }
@@ -69,4 +76,5 @@ test('the guard reads the files it claims to', () => {
   assert.ok(files.length >= 7, `expected the vendored text set, got ${files.length} file(s)`);
   assert.ok(files.includes(relative(ROOT, join(ROOT, 'templates/CLAUDE.md'))));
   assert.ok(files.some((f) => f.startsWith('.claude/commands/')));
+  assert.ok(files.includes(join('.claude/hooks', 'pre-commit')));
 });

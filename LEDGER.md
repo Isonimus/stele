@@ -140,6 +140,12 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
   its vendored `.claude/commands/*.md` and `CLAUDE.md` — gamatar and boxel both. Nothing in
   those repos can detect it, so each needs `/init-method --update` and a re-read of its
   scaffolded `CLAUDE.md`, which `--update` does not overwrite (ADR-0020).
+  `.claude/hooks/pre-commit` joined the same list on 2026-09-09: it carried seven bare
+  citations of its own, in the comments an operator reads precisely when a commit is
+  blocked, and it sits in the installer's byte-identical `VENDORED` set — so until each repo
+  updates, `--check` reports it as differing, correctly. The directory had been outside the
+  vendored-citation guard entirely, which is why the defect the guard's own header describes
+  was sitting in the hook's.
 - [bug] The install preflight checks read permission only, so a managed file that is
   readable but not writable passes it and then crashes with a bare `EACCES` from
   `writeFileSync` — the same stack-trace-instead-of-a-path defect the preflight exists to
