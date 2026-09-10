@@ -295,12 +295,15 @@ are graded by what can actually be mechanised
 
    This layer has two instruments, and neither is a linter. The first is the **mutation
    check** (`npm run mutants`), which answers one narrow question mechanically: *do the
-   tests bite?* It applies a curated list of small behaviour changes to the linter's pure
-   predicates and requires each to break a test. A survivor is not a bug — it is correct
-   behaviour nothing is watching, which a later refactor can reverse in silence. Measured on
-   adoption: 3 of 10 mutants died, and the seven survivors were all correct-but-unpinned
-   behaviour, now covered. It is deliberately not a framework — that would cost the
-   zero-dependency property, and curating the list is the work anyway.
+   tests bite?* It applies a curated list of small behaviour changes and requires each to
+   break a test. What earns a place on that list is the class of decision a mutant can prove
+   ([ADR-0028](adr/0028-mutation-scope-is-the-class-of-decision-not-the-file-list.md)): an
+   entry reverses a decision the code makes, and one that would mostly prove the filesystem
+   or git still works stays out. A survivor is not a bug — it is correct behaviour nothing is
+   watching, which a later refactor can reverse in silence. Measured on adoption: 3 of 10
+   mutants died, and the seven survivors were all correct-but-unpinned behaviour, now
+   covered. It is deliberately not a framework — that would cost the zero-dependency
+   property, and curating the list is the work anyway.
 
    Its limit is stated rather than discovered: it perturbs code and asks whether tests
    notice, so it is blind to an input nobody wrote and to a rule that was wrong from the
