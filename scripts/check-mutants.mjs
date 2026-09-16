@@ -32,9 +32,9 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const LINTER = 'scripts/lint-docs.mjs';
 const IMMUTABLE = 'scripts/check-immutable.mjs';
 
-/** Only `classifyVendored` (ADR-0023) is in scope here — it reverses a verdict, where a
- *  mutant over the installer's copy-and-symlink work would mostly prove the filesystem
- *  still works (ADR-0028, clause 2). */
+/** Only `classifyVendored` (ADR-0023) and `classifyComposition` (ADR-0029) are in scope
+ *  here — each reverses a verdict, where a mutant over the installer's copy-and-symlink
+ *  work would mostly prove the filesystem still works (ADR-0028, clause 2). */
 const INIT = 'scripts/init-method.mjs';
 
 /** The changelog's type classifier and its ordering are total and IO-free, so they fall in
@@ -136,6 +136,12 @@ export const MUTANTS = [
     file: INIT,
     find: "return digest(targetText) === recordedDigest ? 'stale' : 'adapted';",
     replace: "return digest(targetText) === recordedDigest ? 'adapted' : 'stale';",
+  },
+  {
+    label: 'classifyComposition: accept a block that reads the working tree as current',
+    file: INIT,
+    find: "return config.includes(FRAMEWORK_HOOK_ENTRY) ? 'current' : 'working-tree';",
+    replace: "return 'current';",
   },
   {
     label: 'firstLostLine: weaken the exhausted-scan guard',

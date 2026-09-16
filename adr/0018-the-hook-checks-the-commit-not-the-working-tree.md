@@ -2,7 +2,7 @@
 id: 0018
 title: The hook checks the commit, not the working tree
 type: architecture
-status: accepted
+status: amended
 date: 2026-07-27
 supersedes: []
 superseded_by: []
@@ -104,12 +104,20 @@ already stashed unstaged changes by the time it dispatches. The reason is writte
 block, since a later reader comparing it to the hook would otherwise "fix" it into a
 duplicate of machinery the framework already provides.
 
+> **Corrected 2026-09-16.** The premise is wrong for untracked files: the framework's stash
+> sets aside unstaged edits to tracked files and leaves untracked ones on disk, so a record
+> never added passed as part of a commit that lacked it. The composed block now runs the
+> vendored hook; see ADR-0029.
+
 ## Consequences
 
 - **The hook and CI now agree on what they check.** A green hook means the commit is green,
   which is what everyone already believed it meant.
 - **Both install shapes enforce the same thing**, restoring the equivalence ADR-0008 assumed
   and did not verify.
+
+  > **Corrected 2026-09-16.** They did not, for a record left untracked; nothing tested
+  > the composed shape. ADR-0029 makes both run the same script.
 - **`/wrap-up`'s "and stage it" is now belt-and-braces rather than load-bearing.** The
   instruction stays — staging the index is still what the operator wants — but forgetting it
   is caught by a check instead of by memory.

@@ -55,7 +55,7 @@ A target with a `.pre-commit-config.yaml` gets the doc checks **composed into it
 `pre-commit install`. The append is idempotent and additive; the existing config is
 never reordered or rewritten, and `--update` leaves it alone.
 
-Two things to watch:
+Three things to watch:
 
 - A config the script does not recognise (no top-level `repos:`) is **refused**, not
   guessed at. Add the block by hand and say you did.
@@ -63,6 +63,11 @@ Two things to watch:
   is not our hook failing — it means *no* hook runs, including the repo's own ruff and
   mypy. Tell the operator to run `pre-commit install`; do not paper over it by
   symlinking ours instead.
+- `--check` and `--update` report a composed block that calls the checkers directly instead of
+  running `sh .claude/hooks/pre-commit`. Blocks composed before stele:ADR-0029 do that, and
+  they read the working tree, so a record left untracked passes. The tool does not rewrite
+  the config: replace the block by hand with the single entry the report names, and say you
+  did.
 
 ## 4. If it refused the hook
 

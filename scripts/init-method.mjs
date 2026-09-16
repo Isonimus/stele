@@ -95,40 +95,46 @@ const FRAMEWORK_CONFIG = '.pre-commit-config.yaml';
 /** Identifies our block on re-runs, so composing is idempotent. */
 const FRAMEWORK_HOOK_ID = 'stele-docs';
 
+/** The composed block runs the vendored hook rather than the checks it wraps (ADR-0029). */
+const FRAMEWORK_HOOK_ENTRY = 'sh .claude/hooks/pre-commit';
+
 /**
- * Appended verbatim. Mirrors .claude/hooks/pre-commit — the same two checks.
+ * Appended verbatim. One entry, and it is the vendored hook itself.
  *
- * These deliberately run against the working tree (`.`), where the hook materialises the
- * staged tree first (ADR-0018). It is not an oversight and must not be "fixed" into a
- * copy of that machinery: the framework stashes unstaged changes before dispatching, so
- * by the time these entries run the working tree already *is* the index. Reproducing the
- * archive dance here would duplicate what the framework provides — which is the whole
- * reason ADR-0008 chose to compose with it rather than fight it for the file.
+ * The entries once ran `node scripts/lint-docs.mjs .` against the working tree, on the
+ * premise that the framework's stash had already made it equal to the commit (ADR-0018, §4).
+ * It does not: the stash sets aside unstaged edits to tracked files and leaves untracked
+ * files on disk, so a record never added passed as part of a commit that did not contain it.
+ * Running the hook gives both install shapes one implementation of "check the commit"
+ * (ADR-0029), so this must not be "simplified" back into direct calls to the checkers.
  */
 const FRAMEWORK_BLOCK = `
   # Doc invariants (stele:ADR-0003, composed by /init-method per stele:ADR-0008).
-  # Zero-dependency and language: system, so there is nothing to install but node.
+  # Runs the vendored hook, which checks the staged tree rather than the files on disk
+  # (stele:ADR-0029). Zero-dependency and language: system: nothing to install but node.
   - repo: local
     hooks:
       - id: ${FRAMEWORK_HOOK_ID}
-        name: doc invariants hold
-        entry: node scripts/lint-docs.mjs .
-        language: system
-        pass_filenames: false
-        always_run: true
-      - id: stele-index
-        name: adr/INDEX.md matches the corpus
-        entry: node scripts/build-index.mjs --check .
-        language: system
-        pass_filenames: false
-        always_run: true
-      - id: stele-immutable
-        name: immutable documents only grow
-        entry: node scripts/check-immutable.mjs
+        name: doc checks against the commit
+        entry: ${FRAMEWORK_HOOK_ENTRY}
         language: system
         pass_filenames: false
         always_run: true
 `;
+
+/**
+ * How a framework config holds the doc checks: `absent`, `current`, or `working-tree` — a
+ * block composed before ADR-0029 that names our id but not the hook. Install, check and
+ * update all ask here, so they cannot disagree about whether a repo is protected (ADR-0008).
+ */
+function classifyComposition(config) {
+  if (!config.includes(FRAMEWORK_HOOK_ID)) return 'absent';
+  return config.includes(FRAMEWORK_HOOK_ENTRY) ? 'current' : 'working-tree';
+}
+
+/** Reports a block that reads the working tree. Reported and not rewritten: the file is the
+ *  repo's, and `--update` does not restore our version of it (ADR-0008). */
+const WORKING_TREE_BLOCK_MESSAGE = `the composed doc checks read the working tree, so a record left untracked passes a commit that does not contain it (stele:ADR-0029). Replace the stele block by hand with one entry: \`${FRAMEWORK_HOOK_ENTRY}\`, id \`${FRAMEWORK_HOOK_ID}\`, \`pass_filenames: false\`, \`always_run: true\``;
 
 const read = (path) => readFileSync(path, 'utf8');
 
@@ -442,7 +448,9 @@ function composeHook({ target, apply, report }) {
     return report('problem', path, 'no top-level `repos:` key — unrecognised shape, refusing to edit it. Add the stele-docs block by hand.');
   }
 
-  if (config.includes(FRAMEWORK_HOOK_ID)) report('ok', path, 'doc checks composed into the framework');
+  const composition = classifyComposition(config);
+  if (composition === 'current') report('ok', path, 'doc checks composed into the framework');
+  else if (composition === 'working-tree') report('problem', path, WORKING_TREE_BLOCK_MESSAGE);
   else if (!apply) report('would', path, 'append the doc checks as a `repo: local` block');
   else {
     writeFileSync(path, `${config.replace(/\n*$/, '\n')}${FRAMEWORK_BLOCK}`);
@@ -458,6 +466,17 @@ function frameworkInstalled({ target, report }) {
   const hook = join(target, '.git', 'hooks', 'pre-commit');
   if (existsSync(hook)) report('ok', hook, 'the framework dispatcher is installed');
   else report('problem', hook, 'the pre-commit framework is configured but never installed — no hook runs at all, including its own. Run `pre-commit install`.');
+}
+
+/**
+ * An update is when a repo takes a fixed hook, and a block that never runs it gains nothing
+ * from the fix. The config is not ours to rewrite, so the update says so instead (ADR-0029).
+ */
+function staleComposition({ target, report }) {
+  const path = join(target, FRAMEWORK_CONFIG);
+  if (existsSync(path) && classifyComposition(read(path)) === 'working-tree') {
+    report('problem', path, WORKING_TREE_BLOCK_MESSAGE);
+  }
 }
 
 /**
@@ -514,7 +533,9 @@ function check({ target, toolkit, report }) {
   const framework = join(target, FRAMEWORK_CONFIG);
   const hook = join(target, '.git', 'hooks', 'pre-commit');
   if (existsSync(framework)) {
-    if (read(framework).includes(FRAMEWORK_HOOK_ID)) report('ok', framework, 'doc checks composed into the framework');
+    const composition = classifyComposition(read(framework));
+    if (composition === 'current') report('ok', framework, 'doc checks composed into the framework');
+    else if (composition === 'working-tree') report('problem', framework, WORKING_TREE_BLOCK_MESSAGE);
     else report('problem', framework, 'the pre-commit framework runs here but not the doc checks — run /init-method --apply');
     frameworkInstalled({ target, report });
   } else if (!isSymlink(hook)) report('problem', hook, 'no hook installed — nothing checks commits');
@@ -566,6 +587,7 @@ export function initMethod({ target, toolkit = TOOLKIT, mode = 'install', apply 
   } else if (mode === 'update') {
     vendor({ target, toolkit, apply, report });
     vendorAdaptable({ target, toolkit, apply, update: true, force, report });
+    staleComposition({ target, report });
     if (apply) lintAfterUpdate({ target, report });
   } else {
     scaffold({ target, toolkit, apply, report });

@@ -386,7 +386,7 @@ test('a repo using the pre-commit framework gets the checks composed, not a syml
   const config = readFileSync(join(target, '.pre-commit-config.yaml'), 'utf8');
   assert.ok(config.startsWith(FRAMEWORK_CONFIG), 'the existing config must survive verbatim');
   assert.match(config, /id: stele-docs/);
-  assert.match(config, /id: stele-index/);
+  assert.match(config, /entry: sh \.claude\/hooks\/pre-commit$/m, 'the entry runs the hook that checks the commit (ADR-0029)');
   assert.equal(
     existsSync(join(target, '.git', 'hooks', 'pre-commit')),
     false,
@@ -421,6 +421,43 @@ test('a configured-but-uninstalled framework is a problem, because nothing runs 
   mkdirSync(join(target, '.git', 'hooks'), { recursive: true });
   writeFileSync(join(target, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\n# framework\n');
   assert.equal(run({ target,mode: 'check' }).problems, 0);
+});
+
+/** The block /init-method composed before ADR-0029, verbatim: entries reading the working
+ *  tree, which the framework's stash does not make equal to the commit. */
+const WORKING_TREE_BLOCK = `
+  - repo: local
+    hooks:
+      - id: stele-docs
+        name: doc invariants hold
+        entry: node scripts/lint-docs.mjs .
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: stele-index
+        name: adr/INDEX.md matches the corpus
+        entry: node scripts/build-index.mjs --check .
+        language: system
+        pass_filenames: false
+        always_run: true
+`;
+
+test('a composed block that reads the working tree is a problem, and is left for the operator', () => {
+  const { target } = scratchRepo();
+  run({ target, apply: true });
+  const config = `${FRAMEWORK_CONFIG}${WORKING_TREE_BLOCK}`;
+  writeFileSync(join(target, '.pre-commit-config.yaml'), config);
+  mkdirSync(join(target, '.git', 'hooks'), { recursive: true });
+  writeFileSync(join(target, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\n# framework\n');
+
+  for (const mode of ['check', 'update']) {
+    const { actions } = run({ target, mode, apply: true });
+    assert.ok(
+      actions.some((a) => a.status === 'problem' && a.path.endsWith('.pre-commit-config.yaml') && /working tree/.test(a.message)),
+      `--${mode} must report the block that checks the working tree`,
+    );
+  }
+  assert.equal(readFileSync(join(target, '.pre-commit-config.yaml'), 'utf8'), config, 'a config we do not own is never rewritten (ADR-0008)');
 });
 
 test('an unrecognised pre-commit config is refused, never guessed at', () => {

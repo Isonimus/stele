@@ -8,6 +8,8 @@
 # Install: ln -sf ../../.claude/hooks/pre-commit .git/hooks/pre-commit
 # (/init-method does this; see stele:ADR-0003. Do NOT install on a linter-red corpus — fix the
 #  reds first, or every commit is blocked. See LEDGER.)
+# Where the `pre-commit` framework owns that slot, /init-method composes an entry that runs
+# this file instead (stele:ADR-0008, stele:ADR-0029), so both shapes check the same commit.
 #
 # Bypass in a genuine emergency with `git commit --no-verify`; CI still catches it.
 

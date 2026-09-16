@@ -179,3 +179,65 @@ test('a commit that drops the vendored checker is refused, not silently unchecke
   assert.match(result.output, /not in the commit/);
   assert.ok(existsSync(join(target, 'scripts', 'lint-docs.mjs')), 'the working copy is untouched');
 });
+
+/** An installed repo using the `pre-commit` framework, so the doc checks are the composed
+ *  block rather than a symlink (ADR-0008). The framework itself is not installed: these
+ *  tests run the block's entries directly, which is what it does with them. */
+function composedRepo() {
+  const root = mkdtempSync(join(tmpdir(), 'composed-'));
+  const target = join(root, 'repo');
+  mkdirSync(join(target, 'adr'), { recursive: true });
+  git(target, 'init', '--quiet');
+  git(target, 'config', 'user.email', 'test@example.com');
+  git(target, 'config', 'user.name', 'test');
+  writeFileSync(join(target, 'adr', '0001-decision-0001.md'), adr('0001'));
+  writeFileSync(join(target, '.pre-commit-config.yaml'), 'repos: []\n');
+
+  initMethod({ target, toolkit: TOOLKIT, apply: true });
+  git(target, 'add', '-A');
+  git(target, 'commit', '-q', '--no-verify', '-m', 'base');
+
+  process.on('exit', () => rmSync(root, { recursive: true, force: true }));
+  return target;
+}
+
+/** Runs every `entry:` of the composed block from the repo root, with no filenames — the
+ *  block sets `pass_filenames: false` and `language: system`, so that is exactly how the
+ *  framework calls them. Its stash is not reproduced, and does not need to be: it sets
+ *  aside unstaged edits to tracked files, and the case below is an untracked one. */
+function runComposedEntries(target) {
+  const config = readFileSync(join(target, '.pre-commit-config.yaml'), 'utf8');
+  const entries = [...config.matchAll(/^\s+entry: (.+)$/gm)].map((match) => match[1]);
+  assert.ok(entries.length > 0, 'the composed block declares no entry to run');
+  try {
+    for (const entry of entries) execFileSync('sh', ['-c', entry], { cwd: target, encoding: 'utf8', stdio: 'pipe' });
+    return { ok: true, output: '' };
+  } catch (err) {
+    return { ok: false, output: `${err.stdout ?? ''}${err.stderr ?? ''}` };
+  }
+}
+
+test('the composed checks refuse an index listing a record left untracked', () => {
+  // ADR-0029: the framework's stash leaves untracked files on disk, so entries reading the
+  // working tree saw 0002 and passed a commit whose tree lists a record it does not contain.
+  const target = composedRepo();
+  writeFileSync(join(target, 'adr', '0002-decision-0002.md'), adr('0002'));
+  execFileSync('node', [join(target, 'scripts', 'build-index.mjs'), target]);
+  git(target, 'add', 'adr/INDEX.md');
+
+  const result = runComposedEntries(target);
+
+  assert.equal(result.ok, false, 'the commit would land an index naming a record not in it');
+  assert.match(result.output, /out of date/);
+});
+
+test('the composed checks pass the same commit once the record is staged', () => {
+  const target = composedRepo();
+  writeFileSync(join(target, 'adr', '0002-decision-0002.md'), adr('0002'));
+  execFileSync('node', [join(target, 'scripts', 'build-index.mjs'), target]);
+  git(target, 'add', '-A');
+
+  const result = runComposedEntries(target);
+
+  assert.ok(result.ok, `a correctly staged commit must pass:\n${result.output}`);
+});
