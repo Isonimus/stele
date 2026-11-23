@@ -87,6 +87,37 @@ test('a pipe in a title cannot break the table or the edge line', () => {
   assert.match(text, /\| 0001 \| One \\\| Two \| accepted \|/);
 });
 
+/**
+ * Pipes a markdown table reads as cell separators. A pipe is live when the run of
+ * backslashes immediately before it is of even length: each pair is itself one escaped
+ * backslash, so an even run leaves the pipe unescaped. Counting is the assertion that
+ * matches the defect, because a regex cannot tell `\|` from `\\|` with fixed lookbehind.
+ */
+function livePipes(line) {
+  let live = 0;
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] !== '|') continue;
+    let run = 0;
+    for (let j = i - 1; j >= 0 && line[j] === '\\'; j--) run++;
+    if (run % 2 === 0) live++;
+  }
+  return live;
+}
+
+test('a backslash before a pipe in a title cannot break the table', () => {
+  // Escaping the pipe is not enough on its own: a backslash passed through untouched, with
+  // an escaped pipe behind it, renders as one literal backslash followed by a live
+  // separator, and the row gains a column. The backslash has to be escaped first.
+  const text = render({
+    '0001-a.md': fm({ id: '0001', title: 'One \\| Two', type: 'slice', status: 'accepted' }),
+  });
+  const row = text.split('\n').find((line) => line.startsWith('| 0001 '));
+  assert.ok(row, 'the generated tables hold a row for 0001');
+  // Four cells, so four separators: the leading pipe, one after the id, one after the
+  // title, one closing the row.
+  assert.equal(livePipes(row), 4, `row gained a column: ${row}`);
+});
+
 test('render is deterministic — same corpus, byte-identical output', () => {
   const files = {
     '0002-b.md': fm({ id: '0002', title: 'B', type: 'slice', status: 'accepted' }),
