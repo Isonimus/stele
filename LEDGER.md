@@ -244,6 +244,18 @@ Format: `- [type] description (ADR-NNNN)` — type is `bug` | `feature` | `defer
 - [audit] 36 boxel ADRs carry dated `## Amendment` blocks. The `amended` status covers
   them, but whether an amendment should instead be a superseding ADR is unresolved
   (ADR-0002).
+- [bug] CI runs the doc linter and nothing else, so this repo's own test suite is enforced
+  by nobody. `.github/workflows/docs.yml` is the only workflow and holds one job, `lint`,
+  while `package.json` defines `test` (149 assertions across 13 files) and `mutants` (24
+  non-exempt mutants, 1 exempt) that no push or pull request ever runs. Observed 2026-11-23
+  on PR #1, whose only reported checks were two `lint` runs; the suite and the mutation check
+  passed locally and were reported in the pull request body by hand, which is precisely the
+  "a rule enforced by memory holds until the first busy afternoon" failure this project
+  exists to remove. A contributor's pull request can be merged green on a doc lint alone.
+  CI is named as the hook's backstop (ADR-0003), and it backstops the linter only: the hook
+  does not run the tests either, so nothing does. Fix is a `test` job on push and pull
+  request running `npm test`, and a decision on whether `npm run mutants` belongs in the same
+  job, on a schedule, or on a label, since it is the slower of the two.
 
 ## Resolved
 
