@@ -16,8 +16,15 @@ import { loadDocs } from './lint-docs.mjs';
 
 const pad = (v) => String(v).trim().padStart(4, '0');
 
-/** Escape a cell so a title containing `|` cannot break the markdown table. */
-const cell = (s) => String(s).replace(/\|/g, '\\|');
+/**
+ * Escape a cell so a title cannot break the markdown table.
+ *
+ * Backslashes go first, and the order is the whole point: escaping only the pipe turns a
+ * title holding `\|` into `\\|`, which renders as one literal backslash followed by a pipe
+ * the table reads as a cell separator. Escaping the backslash first leaves the pipe's own
+ * escape the only unpaired one.
+ */
+const cell = (s) => String(s).replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
 
 /**
  * Builds the INDEX.md text from a repo's ADR corpus. Pure: takes loaded docs, returns a
